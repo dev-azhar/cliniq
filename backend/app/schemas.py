@@ -58,6 +58,13 @@ class PatientIssueIn(BaseModel):
     status: str = "ACTIVE"
 
 
+class AllergyIn(BaseModel):
+    substance: str
+    drug_class: str | None = None
+    severity: str | None = None
+    reaction: str | None = None
+
+
 class DocumentIn(BaseModel):
     doc_type: str
     title: str | None = None
@@ -89,6 +96,7 @@ class PatientRegistrationRequest(BaseModel):
     blood_group: str | None = None
     address: str | None = None
     issues: list[PatientIssueIn] = Field(default_factory=list)
+    allergies: list[AllergyIn] = Field(default_factory=list)
     documents: list[DocumentIn] = Field(default_factory=list)
 
     @field_validator("dob")

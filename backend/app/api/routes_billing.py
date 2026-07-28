@@ -606,6 +606,17 @@ def _invoice_dict(inv: models.Invoice, db: Session) -> dict:
             "unpaid_amount": round(max(float(line.amount) - line_paid, 0.0), 2),
         })
 
+    # Category checkouts (appointment, labs, or pharmacy) include GST in the
+    # amount charged by Razorpay. Credit the proportional tax for categories
+    # confirmed as paid, otherwise an invoice with paid medication lines still
+    # incorrectly retains their tax as an unpaid balance.
+    gross = sum(float(line.amount) for line in inv.lines)
+    paid_category_gross = sum(
+        float(line.amount) for line in inv.lines if line.category in paid_categories
+    )
+    if gross > 0 and paid_category_gross > 0:
+        paid_amount += float(inv.tax) * (paid_category_gross / gross)
+
     # Any completed payment left after line allocation covers invoice-level
     # charges such as tax or adjustments that do not have their own line.
     paid_amount = min(paid_amount + unapplied_payment, float(inv.total))

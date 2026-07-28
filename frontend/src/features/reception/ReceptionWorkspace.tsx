@@ -332,7 +332,7 @@ export default function ReceptionWorkspace() {
                             </div>
                             <div className="mt-1.5 flex gap-1">
                               <span className={`tag text-[9px] font-bold ${
-                                appt.status === "BOOKED" ? "blue" : appt.status === "CHECKED_IN" ? "violet" : "green"
+                                appt.status === "BOOKED" ? "amber" : appt.status === "CHECKED_IN" ? "blue" : "green"
                               }`}>
                                 {appt.status}
                               </span>
@@ -434,7 +434,7 @@ export default function ReceptionWorkspace() {
                           </div>
                           <div className="mt-2 flex gap-1.5 items-center">
                             <span className={`tag text-[9px] font-bold ${
-                              appt.status === "BOOKED" ? "blue" : appt.status === "CHECKED_IN" ? "violet" : "green"
+                              appt.status === "BOOKED" ? "amber" : appt.status === "CHECKED_IN" ? "blue" : "green"
                             }`}>
                               {appt.status}
                             </span>
