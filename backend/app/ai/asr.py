@@ -143,13 +143,23 @@ def transcribe_audio(
         segments, _info = model.transcribe(
             tmp.name,
             language=language,
-            beam_size=1,
+            beam_size=5,
+            best_of=5,
+            temperature=0.0,
+            condition_on_previous_text=True,
             vad_filter=True,
-            vad_parameters=dict(min_silence_duration_ms=400),
+            vad_parameters=dict(
+                min_silence_duration_ms=600,
+                speech_pad_ms=400,
+                threshold=0.35,
+            ),
         )
         text = " ".join(seg.text.strip() for seg in segments if seg.text.strip()).strip()
         speaker = _label_speaker(encounter_id, tmp.name) if text and encounter_id else None
-        return {"text": text, "speaker": speaker}
+        # Return Whisper's detected language (available even in auto-detect mode) so the
+        # frontend can display and lock in the language for subsequent chunks.
+        detected_language = _info.language if _info and hasattr(_info, "language") else None
+        return {"text": text, "speaker": speaker, "detected_language": detected_language}
     finally:
         try:
             os.unlink(tmp.name)

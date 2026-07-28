@@ -639,8 +639,9 @@ def formulary_guidance_agent(
     print(f"* Local PyTorch AI Scan Findings: {_safe(ai_diagnostics)}")
     print("-" * 76)
 
-    prompt = f"""You are an expert Clinical Pharmacologist and Evidence-Based Formulary AI Assistant.
-Analyze the following patient clinical context and provide generic formulation recommendations for the consulting physician.
+    prompt = f"""You are a world-class Clinical Pharmacologist and Evidence-Based Formulary AI Assistant with expertise across all major international pharmacopeias — WHO Essential Medicines List, BNF (UK), FDA Orange Book (USA), European Pharmacopoeia, Indian Pharmacopoeia, Australian Medicines Handbook, and the Japanese, Chinese, and Brazilian national formularies.
+
+Analyze the following patient clinical context and provide comprehensive generic formulation recommendations for the consulting physician.
 
 ANONYMIZED PATIENT CLINICAL CONTEXT:
 - Present Chief Complaint (Current Visit Only): {chief_complaint}
@@ -648,21 +649,24 @@ ANONYMIZED PATIENT CLINICAL CONTEXT:
 - PyTorch Local AI Diagnostic Findings & Lab Reports (Current Visit Only): {json.dumps(ai_diagnostics)}
 
 CRITICAL MANDATES:
-1. DO NOT mention drug brand names. Output ONLY generic active formulations and pharmacological classes (e.g. Paracetamol 650mg, Levofloxacin 500mg, Azithromycin 250mg, Amoxicillin + Clavulanic Acid 625mg).
+1. DO NOT mention drug brand names. Output ONLY generic active formulations and pharmacological classes (e.g. Paracetamol 650mg, Levofloxacin 500mg, Azithromycin 250mg, Amoxicillin + Clavulanic Acid 625mg, Semaglutide 0.5mg SC weekly).
 2. Directly correlate recommendations to the Present Chief Complaint ({chief_complaint}) and the Current Visit PyTorch AI Diagnostic Results.
-3. DO NOT suggest medications for old or unstated symptoms. Stay strictly focused on the current presentation and lab findings.
+3. Include recommendations from ALL relevant specialties: Cardiology, Respiratory, Endocrinology, Gastroenterology, Neurology, Psychiatry, Infectious Disease, Musculoskeletal, Allergy/Immunology, Dermatology, Urology/Nephrology, Haematology, Ophthalmology, Oncology Supportive, ENT, Obstetrics/Gynaecology, and Paediatrics as applicable.
+4. Reference international evidence-based guidelines (ACC/AHA, ESC, WHO, NICE, IDSA, GINA, GOLD, ADA/EASD, AAN, EULAR, ACR, ASCO, ILAE) to substantiate each recommendation.
+5. DO NOT suggest medications for old or unstated symptoms. Stay strictly focused on the current presentation and lab findings.
+6. For each recommendation, specify the exact dosage including weight/renal adjustments where clinically critical.
 
 Return ONLY a valid JSON object matching this schema:
 {{
   "formula_recommendations": [
     {{
-      "category": "Category name",
+      "category": "Specialty / Condition category",
       "formula_name": "Generic Formula Title",
-      "active_ingredients": "Active ingredients with dose",
+      "active_ingredients": "Generic active ingredients with exact dose",
       "class": "Pharmacological class",
-      "dosage_guidance": "Recommended schedule & duration",
-      "clinical_rationale": "Why this formula is recommended based on patient issues and PyTorch AI scan findings",
-      "safety_note": "Safety monitoring or precaution"
+      "dosage_guidance": "Recommended schedule, route & duration with titration guidance",
+      "clinical_rationale": "Evidence-based rationale citing guideline source and patient-specific reasoning from chief complaint and AI diagnostics",
+      "safety_note": "Key safety monitoring, contraindications, or precautions"
     }}
   ]
 }}"""
@@ -686,242 +690,884 @@ Return ONLY a valid JSON object matching this schema:
     if not formulas:
         all_text = f"{chief_complaint} {' '.join(patient_issues)} {' '.join([f.get('finding', '') for f in ai_diagnostics])}".upper()
 
-        if _any_keyword(["ISCHEMIA", "MYOCARDIAL", "REPOLARIZATION", "ECG", "EKG", "ST-T", "ANGINA"], all_text):
+        # ── CARDIOLOGY ──────────────────────────────────────────────────────────
+        if _any_keyword(["ISCHEMIA", "MYOCARDIAL", "REPOLARIZATION", "ECG", "EKG", "ST-T", "ANGINA", "ACS", "STEMI", "NSTEMI"], all_text):
             formulas.append({
                 "category": "Cardiology / Ischemic Heart Disease",
                 "formula_name": "Dual Antiplatelet Formulation",
                 "active_ingredients": "Aspirin (75mg) + Clopidogrel (75mg)",
                 "class": "Antiplatelet / Antithrombotic",
                 "dosage_guidance": "1 tablet PO QD after meals x 30 days",
-                "clinical_rationale": "Recommended for Acute Coronary Syndrome & Myocardial Ischemia risk reduction.",
-                "safety_note": "Monitor for signs of active bleeding or gastric irritation."
+                "clinical_rationale": "Evidence-based dual antiplatelet therapy for ACS, STEMI/NSTEMI, and myocardial ischemia risk reduction per ACC/ESC guidelines.",
+                "safety_note": "Monitor for GI bleeding; co-prescribe PPI if GI risk is high."
             })
             formulas.append({
                 "category": "Cardiology / Lipid Management",
                 "formula_name": "High-Intensity Statin Formulation",
-                "active_ingredients": "Atorvastatin Calcium (40mg)",
+                "active_ingredients": "Atorvastatin Calcium (40–80mg)",
                 "class": "HMG-CoA Reductase Inhibitor",
-                "dosage_guidance": "1 tablet PO QHS (at bedtime) x 30 days",
-                "clinical_rationale": "Recommended for coronary plaque stabilization & ischemic protection.",
-                "safety_note": "Check baseline hepatic enzyme levels (ALT/AST)."
-            })
-
-        if _any_keyword(["PNEUMONIA", "LUNG", "CONSOLIDATION", "EFFUSION", "CHEST X-RAY", "HRCT"], all_text):
-            formulas.append({
-                "category": "Respiratory / Antibacterial",
-                "formula_name": "Aminopenicillin + Beta-Lactamase Inhibitor Formulation",
-                "active_ingredients": "Amoxicillin (500mg) + Clavulanic Acid (125mg)",
-                "class": "Penicillin-Class Antibiotic",
-                "dosage_guidance": "1 tablet PO BID after meals x 7 days",
-                "clinical_rationale": "First-line empirical therapy for bacterial pneumonia & lower respiratory infection.",
-                "safety_note": "Complete full 7-day course."
+                "dosage_guidance": "1 tablet PO QHS x 30 days (long-term)",
+                "clinical_rationale": "High-intensity statin for coronary plaque stabilization and secondary prevention per ACC/AHA guidelines.",
+                "safety_note": "Monitor ALT/AST baseline; alert for myopathy/rhabdomyolysis."
             })
             formulas.append({
-                "category": "Respiratory / Mucolytic",
-                "formula_name": "Mucolytic Expectorant Formulation",
-                "active_ingredients": "Acetylcysteine (600mg) / Guaifenesin (400mg)",
-                "class": "Mucolytic Agent",
-                "dosage_guidance": "1 effervescent tablet PO BID x 5 days",
-                "clinical_rationale": "Promotes airway clearance and thins thick bronchial secretions.",
-                "safety_note": "Dissolve completely in water before ingestion."
+                "category": "Cardiology / Rate Control",
+                "formula_name": "Cardioselective Beta-Blocker Formulation",
+                "active_ingredients": "Metoprolol Succinate (25–50mg)",
+                "class": "Beta-1 Selective Adrenergic Blocker",
+                "dosage_guidance": "1 tablet PO OD (titrate as tolerated) x 30 days",
+                "clinical_rationale": "Post-ACS mortality reduction and heart rate control per ESC guidelines.",
+                "safety_note": "Avoid abrupt withdrawal; monitor heart rate and blood pressure."
             })
 
-        if _any_keyword(["GLUCOSE", "DIABETES", "HYPERGLYCEMIA", "HBA1C", "SUGAR"], all_text):
+        if _any_keyword(["HEART FAILURE", "CARDIAC FAILURE", "HFrEF", "REDUCED EJECTION FRACTION", "PULMONARY EDEMA", "CARDIOMEGALY"], all_text):
             formulas.append({
-                "category": "Endocrine / Antidiabetic",
-                "formula_name": "Biguanide Glycemic Control Formulation",
-                "active_ingredients": "Metformin Hydrochloride (500mg)",
-                "class": "Biguanide Antidiabetic Agent",
-                "dosage_guidance": "1 tablet PO BID with meals x 30 days",
-                "clinical_rationale": "First-line agent to reduce hepatic glucose production and improve insulin sensitivity.",
-                "safety_note": "Monitor renal function (eGFR > 45 mL/min)."
+                "category": "Cardiology / Heart Failure",
+                "formula_name": "ACE Inhibitor Formulation",
+                "active_ingredients": "Ramipril (5mg)",
+                "class": "Angiotensin-Converting Enzyme Inhibitor",
+                "dosage_guidance": "1 tablet PO OD (titrate to 10mg target) x long-term",
+                "clinical_rationale": "Cornerstone therapy for HFrEF — reduces mortality and hospitalizations per ESC/ACC guidelines.",
+                "safety_note": "Monitor potassium, renal function, and watch for dry cough; switch to ARB if cough occurs."
+            })
+            formulas.append({
+                "category": "Cardiology / Heart Failure",
+                "formula_name": "Loop Diuretic Formulation",
+                "active_ingredients": "Furosemide (40mg)",
+                "class": "Loop Diuretic",
+                "dosage_guidance": "1 tablet PO OD-BID (dose by clinical response)",
+                "clinical_rationale": "Volume overload decongestion in acute/chronic heart failure — symptom relief.",
+                "safety_note": "Monitor serum electrolytes (K+, Mg2+) and renal function regularly."
+            })
+            formulas.append({
+                "category": "Cardiology / Heart Failure",
+                "formula_name": "Mineralocorticoid Receptor Antagonist",
+                "active_ingredients": "Spironolactone (25mg)",
+                "class": "Aldosterone Antagonist",
+                "dosage_guidance": "1 tablet PO OD x long-term",
+                "clinical_rationale": "Mortality reduction in HFrEF (EF ≤35%) per RALES trial evidence.",
+                "safety_note": "Contraindicated in hyperkalemia (K+ > 5.0 mEq/L) or eGFR < 30."
             })
 
-        if _any_keyword(["HYPERTENSION", "BLOOD PRESSURE", "BP HIGH", "ELEVATED BP"], all_text):
+        if _any_keyword(["HYPERTENSION", "BLOOD PRESSURE", "BP HIGH", "ELEVATED BP", "HTN"], all_text):
             formulas.append({
                 "category": "Cardiology / Hypertension",
                 "formula_name": "ARB Antihypertensive Formulation",
                 "active_ingredients": "Telmisartan (40mg)",
                 "class": "Angiotensin Receptor Blocker",
                 "dosage_guidance": "1 tablet PO QD, same time daily x 30 days",
-                "clinical_rationale": "First-line agent for stage 1-2 essential hypertension and cardio-renal protection.",
+                "clinical_rationale": "First-line agent for stage 1-2 essential hypertension and cardio-renal protection per JNC/ESH guidelines.",
                 "safety_note": "Monitor serum potassium and renal function periodically."
             })
-
-        if _any_keyword(["ASTHMA", "COPD", "WHEEZE", "WHEEZING", "BREATHLESSNESS", "DYSPNEA", "BRONCHITIS"], all_text):
             formulas.append({
-                "category": "Respiratory / Bronchodilator",
-                "formula_name": "Short-Acting Beta-2 Agonist Formulation",
-                "active_ingredients": "Salbutamol (100mcg) Metered Dose Inhaler",
-                "class": "Beta-2 Adrenergic Agonist",
-                "dosage_guidance": "2 puffs Q6H PRN for breathlessness/wheeze",
-                "clinical_rationale": "Rapid relief of acute bronchospasm in asthma/COPD exacerbation.",
-                "safety_note": "Watch for tremor/tachycardia with overuse; use spacer if available."
+                "category": "Cardiology / Hypertension",
+                "formula_name": "Calcium Channel Blocker Formulation",
+                "active_ingredients": "Amlodipine Besylate (5mg)",
+                "class": "Dihydropyridine Calcium Channel Blocker",
+                "dosage_guidance": "1 tablet PO OD x 30 days",
+                "clinical_rationale": "Combination antihypertensive especially effective in elderly patients and those of African descent (JNC8 recommendation).",
+                "safety_note": "May cause ankle edema; take at consistent time daily."
             })
 
-        if _any_keyword(["GASTRITIS", "GERD", "ACIDITY", "PEPTIC", "ULCER", "HEARTBURN", "REFLUX"], all_text):
+        if _any_keyword(["ATRIAL FIBRILLATION", "AF", "AFIB", "ARRHYTHMIA", "PALPITATION", "TACHYCARDIA", "SVT"], all_text):
+            formulas.append({
+                "category": "Cardiology / Arrhythmia",
+                "formula_name": "Rate-Controlling Beta-Blocker Formulation",
+                "active_ingredients": "Bisoprolol (2.5–5mg)",
+                "class": "Cardioselective Beta-Blocker",
+                "dosage_guidance": "1 tablet PO OD (titrate per heart rate target <80 bpm) x 30 days",
+                "clinical_rationale": "First-line rate control in atrial fibrillation per AHA/ESC guidelines; reduces ventricular rate.",
+                "safety_note": "Avoid in severe bradycardia, 2nd/3rd degree AV block, or severe asthma."
+            })
+            formulas.append({
+                "category": "Cardiology / Anticoagulation",
+                "formula_name": "Oral Anticoagulant (NOAC) Formulation",
+                "active_ingredients": "Rivaroxaban (20mg) / Apixaban (5mg BD)",
+                "class": "Direct Oral Anticoagulant (DOAC)",
+                "dosage_guidance": "As per CHA₂DS₂-VASc score; Rivaroxaban 20mg PO OD with evening meal",
+                "clinical_rationale": "Stroke prevention in non-valvular atrial fibrillation — preferred over warfarin per ESC guidelines.",
+                "safety_note": "Assess bleeding risk (HAS-BLED score); caution with NSAIDs and renal impairment."
+            })
+
+        if _any_keyword(["DEEP VEIN THROMBOSIS", "DVT", "PULMONARY EMBOLISM", "PE", "VTE", "THROMBOEMBOLISM"], all_text):
+            formulas.append({
+                "category": "Hematology / Anticoagulation",
+                "formula_name": "DOAC Anticoagulation for VTE Formulation",
+                "active_ingredients": "Rivaroxaban (15mg BD x 21 days, then 20mg OD) OR Apixaban (10mg BD x 7 days, then 5mg BD)",
+                "class": "Direct Oral Anticoagulant",
+                "dosage_guidance": "Per VTE treatment protocol — initial loading then maintenance",
+                "clinical_rationale": "Treatment and secondary prevention of DVT/PE — non-inferior to LMWH/warfarin with simpler dosing.",
+                "safety_note": "Baseline renal function required; avoid with strong CYP3A4/P-gp inhibitors."
+            })
+
+        # ── RESPIRATORY ─────────────────────────────────────────────────────────
+        if _any_keyword(["PNEUMONIA", "LUNG", "CONSOLIDATION", "EFFUSION", "CHEST X-RAY", "HRCT", "LOWER RESPIRATORY", "LRTI", "CAP"], all_text):
+            formulas.append({
+                "category": "Respiratory / Community-Acquired Pneumonia",
+                "formula_name": "Aminopenicillin + Beta-Lactamase Inhibitor Formulation",
+                "active_ingredients": "Amoxicillin (875mg) + Clavulanic Acid (125mg)",
+                "class": "Penicillin-Class Antibiotic",
+                "dosage_guidance": "1 tablet PO BID after meals x 7 days",
+                "clinical_rationale": "First-line CAP empirical therapy for outpatients per IDSA/ATS 2019 guidelines.",
+                "safety_note": "Complete full 7-day course; check penicillin allergy history."
+            })
+            formulas.append({
+                "category": "Respiratory / Atypical Coverage",
+                "formula_name": "Macrolide Atypical Pathogen Formulation",
+                "active_ingredients": "Azithromycin (500mg)",
+                "class": "Macrolide Antibiotic",
+                "dosage_guidance": "1 tablet PO OD x 5 days (concurrent with beta-lactam for moderate CAP)",
+                "clinical_rationale": "Covers atypical organisms (Mycoplasma, Chlamydophila, Legionella) in CAP.",
+                "safety_note": "Avoid with QT-prolonging drugs; monitor ECG if cardiac history present."
+            })
+            formulas.append({
+                "category": "Respiratory / Mucolytic",
+                "formula_name": "Mucolytic Expectorant Formulation",
+                "active_ingredients": "Acetylcysteine (600mg) / Ambroxol (75mg SR)",
+                "class": "Mucolytic Agent",
+                "dosage_guidance": "1 tablet/effervescent sachet PO BID x 5-7 days",
+                "clinical_rationale": "Promotes airway clearance and reduces viscosity of bronchial secretions.",
+                "safety_note": "Dissolve completely in water; adequate hydration enhances efficacy."
+            })
+
+        if _any_keyword(["ASTHMA", "COPD", "WHEEZE", "WHEEZING", "BREATHLESSNESS", "DYSPNEA", "BRONCHITIS", "CHRONIC OBSTRUCTIVE"], all_text):
+            formulas.append({
+                "category": "Respiratory / Acute Bronchodilation",
+                "formula_name": "Short-Acting Beta-2 Agonist (SABA) Formulation",
+                "active_ingredients": "Salbutamol / Albuterol (100mcg MDI)",
+                "class": "Beta-2 Adrenergic Agonist",
+                "dosage_guidance": "2 puffs Q4-6H PRN for breathlessness/wheeze (use spacer)",
+                "clinical_rationale": "Rapid relief of acute bronchospasm in asthma/COPD exacerbation per GINA/GOLD guidelines.",
+                "safety_note": "Overuse indicates poor control — escalate to controller therapy."
+            })
+            formulas.append({
+                "category": "Respiratory / Inhaled Corticosteroid Controller",
+                "formula_name": "ICS + LABA Combination Formulation",
+                "active_ingredients": "Budesonide (200mcg) + Formoterol (6mcg) Turbuhaler",
+                "class": "Inhaled Corticosteroid + Long-Acting Beta-2 Agonist",
+                "dosage_guidance": "1-2 inhalations PO BID (maintenance) — max 8 inhalations/day incl. rescue",
+                "clinical_rationale": "First-line controller for moderate-severe persistent asthma per GINA Step 3-4 guidelines.",
+                "safety_note": "Rinse mouth after inhalation to prevent oral candidiasis."
+            })
+            formulas.append({
+                "category": "Respiratory / COPD Maintenance",
+                "formula_name": "Long-Acting Muscarinic Antagonist (LAMA) Formulation",
+                "active_ingredients": "Tiotropium Bromide (18mcg HandiHaler)",
+                "class": "Long-Acting Muscarinic Antagonist",
+                "dosage_guidance": "1 capsule inhaled OD via HandiHaler device",
+                "clinical_rationale": "GOLD guideline-recommended maintenance bronchodilator for COPD group B/C/D.",
+                "safety_note": "Do not swallow capsule; avoid in narrow-angle glaucoma or BPH."
+            })
+
+        if _any_keyword(["TUBERCULOSIS", "TB", "AFB", "MANTOUX", "SPUTUM POSITIVE", "ACID-FAST BACILLI"], all_text):
+            formulas.append({
+                "category": "Infectious Disease / Anti-Tubercular",
+                "formula_name": "First-Line Anti-Tubercular DOTS Combination",
+                "active_ingredients": "Rifampicin (600mg) + Isoniazid (300mg) + Pyrazinamide (1500mg) + Ethambutol (1200mg) — FDC per weight band",
+                "class": "Anti-Tubercular Therapy (ATT)",
+                "dosage_guidance": "PO OD on empty stomach — 2 months intensive (RHZE) + 4 months continuation (RH) per WHO DOTS protocol",
+                "clinical_rationale": "WHO-standard first-line DOTS regimen for drug-susceptible pulmonary and extrapulmonary TB.",
+                "safety_note": "Baseline LFTs, uric acid, visual acuity required; notify public health TB program."
+            })
+            formulas.append({
+                "category": "Infectious Disease / Pyridoxine Supplementation",
+                "formula_name": "Pyridoxine (Vitamin B6) Supplementation",
+                "active_ingredients": "Pyridoxine Hydrochloride (25mg)",
+                "class": "Vitamin B6 Supplement",
+                "dosage_guidance": "1 tablet PO OD throughout ATT course",
+                "clinical_rationale": "Prevents isoniazid-induced peripheral neuropathy — mandatory co-prescription with INH-containing ATT.",
+                "safety_note": "Doses > 200mg/day may paradoxically cause neuropathy; standard 25mg protective."
+            })
+
+        # ── ENDOCRINOLOGY ────────────────────────────────────────────────────────
+        if _any_keyword(["GLUCOSE", "DIABETES", "HYPERGLYCEMIA", "HBA1C", "SUGAR", "DM TYPE 2", "T2DM", "FASTING SUGAR"], all_text):
+            formulas.append({
+                "category": "Endocrine / Antidiabetic — First Line",
+                "formula_name": "Biguanide Glycemic Control Formulation",
+                "active_ingredients": "Metformin Hydrochloride (500–1000mg)",
+                "class": "Biguanide Antidiabetic Agent",
+                "dosage_guidance": "500mg PO BID with meals; titrate to 1000mg BID over 4 weeks as tolerated",
+                "clinical_rationale": "First-line T2DM agent per ADA/EASD guidelines — reduces hepatic glucose output, improves insulin sensitivity, weight-neutral.",
+                "safety_note": "Contraindicated eGFR < 30; withhold 48h before contrast procedures; start low to minimize GI side effects."
+            })
+            formulas.append({
+                "category": "Endocrine / Antidiabetic — SGLT2 Inhibitor",
+                "formula_name": "SGLT2 Inhibitor Cardio-Renal Formulation",
+                "active_ingredients": "Empagliflozin (10mg) / Dapagliflozin (10mg)",
+                "class": "Sodium-Glucose Co-transporter-2 Inhibitor",
+                "dosage_guidance": "1 tablet PO OD in the morning x long-term",
+                "clinical_rationale": "Superior cardiovascular and renal outcomes in T2DM with established CVD or CKD per EMPA-REG, DECLARE trials.",
+                "safety_note": "Withhold 3 days before major surgery; watch for DKA, UTI, genital fungal infection."
+            })
+            formulas.append({
+                "category": "Endocrine / Antidiabetic — GLP-1 Agonist",
+                "formula_name": "GLP-1 Receptor Agonist Formulation",
+                "active_ingredients": "Semaglutide (0.5mg SC weekly) / Oral Semaglutide (7mg OD)",
+                "class": "Glucagon-Like Peptide-1 Receptor Agonist",
+                "dosage_guidance": "Start 0.25mg SC weekly x 4 weeks, then 0.5mg; oral: 7mg OD before first meal",
+                "clinical_rationale": "Weight loss + glycemic control + CV risk reduction (SUSTAIN-6, LEADER trials) — preferred in obese T2DM with CVD.",
+                "safety_note": "Contraindicated with personal/family history of medullary thyroid cancer or MEN2."
+            })
+
+        if _any_keyword(["HYPOTHYROID", "THYROID", "TSH HIGH", "HASHIMOTO", "MYXEDEMA"], all_text):
+            formulas.append({
+                "category": "Endocrine / Thyroid Replacement",
+                "formula_name": "Levothyroxine Sodium Formulation",
+                "active_ingredients": "Levothyroxine Sodium (25–100mcg; dose by TSH and weight)",
+                "class": "Synthetic L-Thyroxine (T4)",
+                "dosage_guidance": "PO OD on empty stomach, 30-60 min before breakfast; start low in elderly/cardiac patients",
+                "clinical_rationale": "Standard thyroid hormone replacement for primary hypothyroidism — normalizes TSH per ATA guidelines.",
+                "safety_note": "Recheck TSH in 6-8 weeks for dose titration; interactions with calcium, iron (separate by 4h)."
+            })
+
+        if _any_keyword(["HYPERTHYROID", "THYROTOXICOSIS", "GRAVES", "TSH LOW", "FREE T4 HIGH"], all_text):
+            formulas.append({
+                "category": "Endocrine / Antithyroid",
+                "formula_name": "Thionamide Antithyroid Formulation",
+                "active_ingredients": "Carbimazole (20–40mg) / Methimazole (15–30mg)",
+                "class": "Thionamide Antithyroid Agent",
+                "dosage_guidance": "Initial: Carbimazole 20mg PO BD; titrate per TFTs toward block-replace or titration protocol",
+                "clinical_rationale": "First-line medical management of Graves' disease and hyperthyroidism per ETA/ATA guidelines.",
+                "safety_note": "CRITICAL: Warn about agranulocytosis — instruct patient to report fever/sore throat immediately; check CBC if symptomatic."
+            })
+
+        if _any_keyword(["ADRENAL INSUFFICIENCY", "ADDISON", "CORTISOL LOW", "STEROID DEPENDENT"], all_text):
+            formulas.append({
+                "category": "Endocrine / Adrenal Replacement",
+                "formula_name": "Glucocorticoid Replacement Formulation",
+                "active_ingredients": "Hydrocortisone (10mg AM + 5mg noon + 5mg PM)",
+                "class": "Glucocorticoid",
+                "dosage_guidance": "PO in divided doses mimicking diurnal cortisol rhythm",
+                "clinical_rationale": "Replacement therapy for primary/secondary adrenal insufficiency per Endocrine Society guidelines.",
+                "safety_note": "Sick day rules mandatory — double/triple dose during intercurrent illness; carry steroid card."
+            })
+
+        if _any_keyword(["OSTEOPOROSIS", "LOW BONE DENSITY", "DEXA", "FRACTURE RISK", "MENOPAUSE", "T-SCORE"], all_text):
+            formulas.append({
+                "category": "Endocrine / Bone Health",
+                "formula_name": "Bisphosphonate Bone Protection Formulation",
+                "active_ingredients": "Alendronate Sodium (70mg once weekly)",
+                "class": "Bisphosphonate",
+                "dosage_guidance": "1 tablet PO once weekly on empty stomach with full glass of water — remain upright 30 min",
+                "clinical_rationale": "First-line pharmacotherapy for osteoporosis and fracture risk reduction per NOF/NOGG guidelines.",
+                "safety_note": "Contraindicated in esophageal stricture or inability to sit/stand; dental exam before initiation."
+            })
+            formulas.append({
+                "category": "Endocrine / Calcium & Vitamin D",
+                "formula_name": "Calcium + Vitamin D3 Supplementation",
+                "active_ingredients": "Calcium Carbonate (1000mg) + Cholecalciferol D3 (800–2000 IU)",
+                "class": "Mineral + Fat-Soluble Vitamin Supplement",
+                "dosage_guidance": "1 tablet PO OD-BID with food (calcium best absorbed <500mg per dose)",
+                "clinical_rationale": "Essential co-prescription with bisphosphonates for osteoporosis; corrects vitamin D deficiency worldwide.",
+                "safety_note": "Separate calcium from bisphosphonate by 30 min; check baseline 25-OH vitamin D."
+            })
+
+        # ── GASTROENTEROLOGY ────────────────────────────────────────────────────
+        if _any_keyword(["GASTRITIS", "GERD", "ACIDITY", "PEPTIC", "ULCER", "HEARTBURN", "REFLUX", "DYSPEPSIA", "H. PYLORI"], all_text):
             formulas.append({
                 "category": "Gastroenterology / Acid Suppression",
                 "formula_name": "Proton Pump Inhibitor Formulation",
-                "active_ingredients": "Pantoprazole (40mg)",
+                "active_ingredients": "Pantoprazole (40mg) / Omeprazole (20mg)",
                 "class": "Proton Pump Inhibitor",
-                "dosage_guidance": "1 tablet PO OD before breakfast x 14 days",
-                "clinical_rationale": "Reduces gastric acid secretion for GERD, gastritis, and peptic ulcer symptom relief.",
-                "safety_note": "Take on empty stomach 30 minutes before food."
+                "dosage_guidance": "1 tablet PO OD 30 min before breakfast x 4-8 weeks (longer for erosive esophagitis)",
+                "clinical_rationale": "Most effective acid suppression for GERD, peptic ulcer disease, and H. pylori eradication per ACG guidelines.",
+                "safety_note": "Avoid long-term without indication; risk of hypomagnesaemia and C. difficile with prolonged use."
             })
+            if _any_keyword(["H. PYLORI", "HELICOBACTER", "UREA BREATH", "PEPTIC ULCER"], all_text):
+                formulas.append({
+                    "category": "Gastroenterology / H. pylori Eradication",
+                    "formula_name": "Triple Therapy H. pylori Eradication Formulation",
+                    "active_ingredients": "Omeprazole (20mg BD) + Clarithromycin (500mg BD) + Amoxicillin (1g BD)",
+                    "class": "PPI + Macrolide + Amoxicillin Triple Regimen",
+                    "dosage_guidance": "All three agents PO BD x 14 days (10-14 day courses preferred per ACG 2022)",
+                    "clinical_rationale": "Standard clarithromycin-based triple therapy for H. pylori eradication per ACG/Maastricht V guidelines.",
+                    "safety_note": "Check local clarithromycin resistance rates; confirm eradication 4 weeks post-therapy with UBT or stool antigen."
+                })
 
-        if _any_keyword(["UTI", "URINARY TRACT", "DYSURIA", "BURNING MICTURITION", "URINE INFECTION"], all_text):
-            formulas.append({
-                "category": "Urology / Antibacterial",
-                "formula_name": "Fluoroquinolone Urinary Antibacterial Formulation",
-                "active_ingredients": "Nitrofurantoin (100mg)",
-                "class": "Urinary Antiseptic",
-                "dosage_guidance": "1 capsule PO BID with food x 5 days",
-                "clinical_rationale": "First-line empirical therapy for uncomplicated lower urinary tract infection.",
-                "safety_note": "Complete full course; avoid in renal impairment (eGFR < 30)."
-            })
-
-        if _any_keyword(["MIGRAINE", "HEADACHE", "CEPHALGIA"], all_text):
-            formulas.append({
-                "category": "Neurology / Analgesic",
-                "formula_name": "Migraine Abortive Formulation",
-                "active_ingredients": "Sumatriptan (50mg)",
-                "class": "5-HT1 Receptor Agonist (Triptan)",
-                "dosage_guidance": "1 tablet PO at onset, may repeat once after 2 hours (max 2/day)",
-                "clinical_rationale": "First-line abortive therapy for moderate-to-severe migraine attacks.",
-                "safety_note": "Contraindicated with ischemic heart disease or uncontrolled hypertension."
-            })
-
-        if _any_keyword(["ALLERGY", "ALLERGIC", "RHINITIS", "URTICARIA", "ITCHING", "SNEEZING"], all_text):
-            formulas.append({
-                "category": "Allergy / Antihistamine",
-                "formula_name": "Second-Generation Antihistamine Formulation",
-                "active_ingredients": "Cetirizine (10mg)",
-                "class": "H1 Antihistamine",
-                "dosage_guidance": "1 tablet PO OD at bedtime x 5-7 days",
-                "clinical_rationale": "Relieves allergic rhinitis, urticaria, and pruritus with minimal sedation.",
-                "safety_note": "May cause mild drowsiness; avoid alcohol."
-            })
-
-        if _any_keyword(["CELLULITIS", "SKIN INFECTION", "ABSCESS", "WOUND INFECTION", "PYODERMA"], all_text):
-            formulas.append({
-                "category": "Dermatology / Antibacterial",
-                "formula_name": "Cephalosporin Skin & Soft Tissue Formulation",
-                "active_ingredients": "Cephalexin (500mg)",
-                "class": "First-Generation Cephalosporin",
-                "dosage_guidance": "1 capsule PO QID x 7 days",
-                "clinical_rationale": "First-line empirical coverage for uncomplicated skin and soft tissue infection.",
-                "safety_note": "Screen for penicillin/cephalosporin allergy before starting."
-            })
-
-        if _any_keyword(["HYPOTHYROID", "THYROID", "TSH"], all_text):
-            formulas.append({
-                "category": "Endocrine / Thyroid Replacement",
-                "formula_name": "Thyroid Hormone Replacement Formulation",
-                "active_ingredients": "Levothyroxine Sodium (50mcg)",
-                "class": "Synthetic Thyroid Hormone",
-                "dosage_guidance": "1 tablet PO OD on empty stomach, 30 min before breakfast x 30 days",
-                "clinical_rationale": "Replacement therapy for primary hypothyroidism to normalize TSH levels.",
-                "safety_note": "Recheck TSH after 6-8 weeks before dose adjustment."
-            })
-
-        if _any_keyword(["ANEMIA", "LOW HEMOGLOBIN", "HB LOW", "IRON DEFICIENCY"], all_text):
-            formulas.append({
-                "category": "Hematology / Hematinic",
-                "formula_name": "Iron Replacement Formulation",
-                "active_ingredients": "Ferrous Ascorbate (100mg) + Folic Acid (1.5mg)",
-                "class": "Oral Iron Supplement",
-                "dosage_guidance": "1 tablet PO OD after food x 30 days",
-                "clinical_rationale": "Corrects iron-deficiency anemia and replenishes depleted iron stores.",
-                "safety_note": "May cause constipation/dark stools; take with vitamin C source for absorption."
-            })
-
-        if _any_keyword(["ARTHRITIS", "JOINT PAIN", "KNEE PAIN", "BACK PAIN", "MUSCLE PAIN", "MYALGIA", "SPRAIN"], all_text):
-            formulas.append({
-                "category": "Musculoskeletal / Anti-inflammatory",
-                "formula_name": "NSAID Analgesic Formulation",
-                "active_ingredients": "Aceclofenac (100mg) + Paracetamol (325mg)",
-                "class": "Non-Steroidal Anti-Inflammatory Drug",
-                "dosage_guidance": "1 tablet PO BID after food x 5 days",
-                "clinical_rationale": "Relieves musculoskeletal pain and inflammation from arthritis, sprain, or myalgia.",
-                "safety_note": "Avoid in active peptic ulcer disease or renal impairment; take with food."
-            })
-
-        if _any_keyword(["ANXIETY", "DEPRESSION", "INSOMNIA", "SLEEP", "PANIC"], all_text):
-            formulas.append({
-                "category": "Psychiatry / Anxiolytic",
-                "formula_name": "SSRI Antidepressant Formulation",
-                "active_ingredients": "Escitalopram (10mg)",
-                "class": "Selective Serotonin Reuptake Inhibitor",
-                "dosage_guidance": "1 tablet PO OD in the morning x 30 days",
-                "clinical_rationale": "First-line agent for generalized anxiety disorder and mild-to-moderate depression.",
-                "safety_note": "Effect may take 2-4 weeks; do not discontinue abruptly. Refer to psychiatry if severe."
-            })
-
-        if _any_keyword(["SINUSITIS", "OTITIS", "EAR PAIN", "SORE THROAT", "PHARYNGITIS", "TONSILLITIS"], all_text):
-            formulas.append({
-                "category": "ENT / Antibacterial",
-                "formula_name": "Macrolide ENT Infection Formulation",
-                "active_ingredients": "Azithromycin (500mg)",
-                "class": "Macrolide Antibiotic",
-                "dosage_guidance": "1 tablet PO OD x 3 days",
-                "clinical_rationale": "Empirical coverage for bacterial sinusitis, otitis media, or tonsillopharyngitis.",
-                "safety_note": "Take on empty stomach; avoid with known macrolide/QT-prolongation history."
-            })
-
-        if _any_keyword(["DIARRHEA", "GASTROENTERITIS", "LOOSE MOTION", "VOMITING", "DEHYDRATION"], all_text):
+        if _any_keyword(["DIARRHEA", "GASTROENTERITIS", "LOOSE MOTION", "VOMITING", "DEHYDRATION", "TRAVELER'S DIARRHEA"], all_text):
             formulas.append({
                 "category": "Gastroenterology / Rehydration & Antiemetic",
                 "formula_name": "Oral Rehydration & Antiemetic Formulation",
-                "active_ingredients": "ORS Solution + Ondansetron (4mg)",
-                "class": "Rehydration Salt + 5-HT3 Antagonist",
-                "dosage_guidance": "ORS ad lib after every loose stool; Ondansetron 1 tablet PO Q8H PRN for vomiting",
-                "clinical_rationale": "Prevents dehydration and controls vomiting in acute gastroenteritis.",
-                "safety_note": "Seek urgent care if signs of severe dehydration or blood in stool."
+                "active_ingredients": "ORS (WHO low-osmolarity formula) + Ondansetron (4mg)",
+                "class": "Electrolyte Rehydration + 5-HT3 Antagonist",
+                "dosage_guidance": "ORS 200-400mL after every loose stool; Ondansetron 1 tablet Q8H PRN vomiting",
+                "clinical_rationale": "WHO-recommended first-line management for acute gastroenteritis — prevents dehydration complications.",
+                "safety_note": "Seek urgent care for bloody stool, high fever, or severe dehydration signs."
+            })
+            formulas.append({
+                "category": "Gastroenterology / Gut Flora Restoration",
+                "formula_name": "Probiotic Formulation",
+                "active_ingredients": "Saccharomyces boulardii (250mg) / Lactobacillus + Bifidobacterium blend",
+                "class": "Probiotic (Live Biotherapeutic Product)",
+                "dosage_guidance": "1 capsule PO BID x 5-7 days (during and after antibiotic course if applicable)",
+                "clinical_rationale": "Reduces duration of acute diarrhea and antibiotic-associated diarrhea per Cochrane meta-analysis evidence.",
+                "safety_note": "Avoid in severely immunocompromised patients; refrigerate Lactobacillus-based products."
             })
 
-        if _any_keyword(["FEVER", "VIRAL", "FLU", "INFLUENZA", "COLD", "COUGH", "URI", "COMMON COLD"], all_text):
+        if _any_keyword(["CONSTIPATION", "BOWEL", "STRAINING", "HARD STOOL"], all_text):
             formulas.append({
-                "category": "General / Antipyretic & Cough-Cold",
-                "formula_name": "Antipyretic + Antitussive Formulation",
-                "active_ingredients": "Paracetamol (650mg) + Cetirizine (5mg) + Dextromethorphan (10mg)",
-                "class": "Antipyretic / Antihistamine / Antitussive Combination",
-                "dosage_guidance": "1 tablet PO Q8H PRN for fever/cough/cold symptoms x 3-5 days",
-                "clinical_rationale": "Symptomatic relief for viral upper respiratory tract infection / common cold / flu.",
-                "safety_note": "Do not exceed 3,000mg paracetamol/day; hydrate adequately and rest."
-            })
-
-        if _any_keyword(["CONSTIPATION", "BOWEL"], all_text):
-            formulas.append({
-                "category": "Gastroenterology / Laxative",
-                "formula_name": "Osmotic Laxative Formulation",
-                "active_ingredients": "Lactulose Solution (10g/15mL)",
+                "category": "Gastroenterology / Constipation",
+                "formula_name": "Osmotic + Bulking Laxative Formulation",
+                "active_ingredients": "Lactulose (10g/15mL) OR Polyethylene Glycol 3350 (17g sachet)",
                 "class": "Osmotic Laxative",
-                "dosage_guidance": "15mL PO OD-BID as needed",
-                "clinical_rationale": "Softens stool and promotes bowel movement for simple constipation.",
-                "safety_note": "Ensure adequate fluid intake; may cause bloating initially."
+                "dosage_guidance": "Lactulose 15-30mL PO BD; or PEG 3350 1 sachet in 125mL water OD",
+                "clinical_rationale": "Safe first-line osmotic laxative for functional constipation per ACG/BSG guidelines.",
+                "safety_note": "Ensure adequate fluid intake; may cause bloating — titrate dose to response."
             })
 
-        if _any_keyword(["TUBERCULOSIS", "TB", "AFB", "MANTOUX"], all_text):
+        if _any_keyword(["HEPATITIS", "LIVER DISEASE", "CIRRHOSIS", "JAUNDICE", "HBsAg", "HCV", "ALT HIGH", "AST HIGH", "HEPATIC"], all_text):
             formulas.append({
-                "category": "Infectious Disease / Anti-Tubercular",
-                "formula_name": "First-Line Anti-Tubercular Combination Formulation",
-                "active_ingredients": "Rifampicin + Isoniazid + Pyrazinamide + Ethambutol (Fixed-Dose Combination)",
-                "class": "Anti-Tubercular Therapy (ATT)",
-                "dosage_guidance": "As per weight-band FDC dosing PO OD on empty stomach x per DOTS protocol",
-                "clinical_rationale": "Standard first-line intensive-phase regimen for confirmed pulmonary/extrapulmonary TB.",
-                "safety_note": "Baseline and periodic LFTs required; refer to TB/DOTS program for monitoring."
+                "category": "Hepatology / Liver Protection",
+                "formula_name": "Hepatoprotective Formulation",
+                "active_ingredients": "Silymarin (140mg) / Ursodeoxycholic Acid (300mg BD)",
+                "class": "Hepatoprotective / Bile Acid Supplement",
+                "dosage_guidance": "Silymarin 1 capsule PO TID; or UDCA 300mg PO BD with food",
+                "clinical_rationale": "Liver cytoprotection in NAFLD/NASH, drug-induced hepatitis, and cholestatic disease — reduces hepatocellular inflammation.",
+                "safety_note": "UDCA preferred for cholestatic conditions; not a substitute for specific hepatitis antiviral therapy."
+            })
+            if _any_keyword(["HEPATITIS B", "HBsAg POSITIVE", "HBV", "CHRONIC HEPATITIS B"], all_text):
+                formulas.append({
+                    "category": "Hepatology / Antiviral — HBV",
+                    "formula_name": "Nucleoside Analogue Anti-HBV Formulation",
+                    "active_ingredients": "Tenofovir Disoproxil Fumarate (300mg) / Entecavir (0.5mg)",
+                    "class": "Nucleoside/Nucleotide Reverse Transcriptase Inhibitor",
+                    "dosage_guidance": "1 tablet PO OD on empty stomach x long-term (per AASLD/EASL HBV treatment thresholds)",
+                    "clinical_rationale": "First-line antiviral suppression for chronic HBV with high viral load, HBeAg-positive, or advanced fibrosis.",
+                    "safety_note": "Monitor HBV DNA, LFTs, renal function; do not discontinue without specialist guidance."
+                })
+
+        if _any_keyword(["IRRITABLE BOWEL", "IBS", "ABDOMINAL CRAMPS", "COLITIS", "SPASTIC COLON"], all_text):
+            formulas.append({
+                "category": "Gastroenterology / IBS",
+                "formula_name": "Antispasmodic Formulation",
+                "active_ingredients": "Mebeverine (135mg) / Dicyclomine (20mg)",
+                "class": "GI Smooth Muscle Antispasmodic",
+                "dosage_guidance": "1 tablet PO TID 20 min before meals x 4 weeks",
+                "clinical_rationale": "First-line symptomatic treatment for abdominal cramping and altered bowel habit in IBS per BSG/ACG guidelines.",
+                "safety_note": "Safe in IBS-D and IBS-C; avoid Dicyclomine in narrow-angle glaucoma or BPH."
+            })
+
+        # ── INFECTIOUS DISEASE ──────────────────────────────────────────────────
+        if _any_keyword(["MALARIA", "FALCIPARUM", "VIVAX", "PLASMODIUM", "SMEAR POSITIVE", "RDT POSITIVE"], all_text):
+            formulas.append({
+                "category": "Infectious Disease / Antimalarial",
+                "formula_name": "Artemisinin Combination Therapy (ACT)",
+                "active_ingredients": "Artemether (20mg) + Lumefantrine (120mg) — co-formulated tablet",
+                "class": "Artemisinin-Based Combination Antimalarial",
+                "dosage_guidance": "4 tablets PO BD x 3 days (at 0, 8, 24, 36, 48, 60 hours); weight-adjusted for children",
+                "clinical_rationale": "WHO first-line ACT for uncomplicated falciparum malaria — superior efficacy and resistance profile.",
+                "safety_note": "Take with fatty food for absorption; ECG monitoring if cardiac history; follow-up blood smear at day 3/7."
+            })
+            if _any_keyword(["VIVAX", "OVALE", "RELAPSING MALARIA", "RADICAL CURE"], all_text):
+                formulas.append({
+                    "category": "Infectious Disease / Antimalarial Radical Cure",
+                    "formula_name": "Primaquine Radical Cure Formulation",
+                    "active_ingredients": "Primaquine Phosphate (15mg base OD for P.vivax / 30mg base for P.ovale)",
+                    "class": "8-Aminoquinoline Anti-relapse Agent",
+                    "dosage_guidance": "15mg base PO OD x 14 days after chloroquine/ACT course",
+                    "clinical_rationale": "Eliminates liver hypnozoites (radical cure) in P. vivax/P. ovale to prevent relapse per WHO guidelines.",
+                    "safety_note": "MANDATORY G6PD testing before use — risk of severe haemolysis in G6PD deficiency."
+                })
+
+        if _any_keyword(["DENGUE", "DENGUE FEVER", "NS1 POSITIVE", "THROMBOCYTOPENIA", "PLATELET LOW"], all_text):
+            formulas.append({
+                "category": "Infectious Disease / Dengue Management",
+                "formula_name": "Supportive Dengue Care Formulation",
+                "active_ingredients": "Paracetamol / Acetaminophen (500–650mg) + ORS Rehydration",
+                "class": "Antipyretic + Oral Rehydration",
+                "dosage_guidance": "Paracetamol 650mg PO Q6H PRN for fever (max 3g/day); ORS 2-3L/day oral fluids",
+                "clinical_rationale": "WHO dengue management guidelines — antipyretic and IV fluid management; NO NSAIDs/aspirin.",
+                "safety_note": "AVOID aspirin and ibuprofen (bleeding risk); monitor platelet count daily; admit if warning signs present."
+            })
+
+        if _any_keyword(["HIV", "AIDS", "CD4", "ANTIRETROVIRAL", "ART", "VIRAL LOAD HIV"], all_text):
+            formulas.append({
+                "category": "Infectious Disease / Antiretroviral",
+                "formula_name": "First-Line ART Combination Formulation",
+                "active_ingredients": "Tenofovir (300mg) + Lamivudine (300mg) + Dolutegravir (50mg) — FDC (TLD)",
+                "class": "NRTI Backbone + INSTI (Integrase Strand Transfer Inhibitor)",
+                "dosage_guidance": "1 FDC tablet PO OD (preferably at night) x long-term — per national ART guidelines",
+                "clinical_rationale": "WHO 2021 preferred first-line ART — high genetic barrier to resistance, well-tolerated, simplified dosing.",
+                "safety_note": "Strict adherence critical (>95%); quarterly viral load monitoring; screen for HBV co-infection before TDF."
+            })
+
+        if _any_keyword(["SEPSIS", "SEPTICEMIA", "BACTEREMIA", "BLOOD CULTURE", "MULTIDRUG RESISTANT", "MDR"], all_text):
+            formulas.append({
+                "category": "Infectious Disease / Empirical Sepsis",
+                "formula_name": "Broad-Spectrum Beta-Lactam Empirical Formulation",
+                "active_ingredients": "Piperacillin (4g) + Tazobactam (0.5g) IV Q8H / Meropenem (1g IV Q8H) for MDR risk",
+                "class": "Extended-Spectrum Penicillin + Beta-Lactamase Inhibitor / Carbapenem",
+                "dosage_guidance": "IV administration — dose per renal function; refer to local antibiogram for empirical choice",
+                "clinical_rationale": "Surviving Sepsis Campaign guideline-recommended empirical therapy for severe sepsis/septic shock within 1 hour of recognition.",
+                "safety_note": "De-escalate based on culture results; ID/microbiology consultation essential; monitor renal and hepatic function."
+            })
+
+        if _any_keyword(["UTI", "URINARY TRACT", "DYSURIA", "BURNING MICTURITION", "URINE INFECTION", "CYSTITIS", "PYELONEPHRITIS"], all_text):
+            formulas.append({
+                "category": "Urology / Antibacterial",
+                "formula_name": "Urinary Tract Antibacterial Formulation",
+                "active_ingredients": "Nitrofurantoin (100mg MR) for uncomplicated / Ciprofloxacin (500mg BD) for complicated UTI",
+                "class": "Urinary Antiseptic / Fluoroquinolone",
+                "dosage_guidance": "Nitrofurantoin 100mg MR PO BD with food x 5 days; Ciprofloxacin 500mg BD x 7 days for complicated/male UTI",
+                "clinical_rationale": "NICE/IDSA guideline-recommended empirical UTI therapy — nitrofurantoin preferred to preserve fluoroquinolone spectrum.",
+                "safety_note": "Nitrofurantoin contraindicated eGFR < 30; urine culture before starting; check local resistance patterns."
+            })
+
+        if _any_keyword(["COVID", "SARS-COV-2", "COVID-19", "CORONAVIRUS", "PCR POSITIVE"], all_text):
+            formulas.append({
+                "category": "Infectious Disease / COVID-19",
+                "formula_name": "Antiviral + Supportive COVID-19 Formulation",
+                "active_ingredients": "Nirmatrelvir (150mg) + Ritonavir (100mg) [Paxlovid] / Molnupiravir (800mg BD) if high-risk",
+                "class": "Oral Antiviral / 3CLpro Protease Inhibitor",
+                "dosage_guidance": "Paxlovid: 2 tabs Nirmatrelvir + 1 tab Ritonavir PO BD x 5 days (start within 5 days of symptom onset)",
+                "clinical_rationale": "WHO-recommended oral antiviral for high-risk non-hospitalized COVID-19 adults — 89% reduction in hospitalization (EPIC-HR).",
+                "safety_note": "Check drug interactions (Ritonavir is a strong CYP3A4 inhibitor); contraindicated with simvastatin, rifampicin; eGFR adjust."
+            })
+
+        # ── NEUROLOGY ──────────────────────────────────────────────────────────
+        if _any_keyword(["MIGRAINE", "HEADACHE", "CEPHALGIA", "HEMICRANIAL", "NAUSEA HEADACHE", "PHOTOPHOBIA"], all_text):
+            formulas.append({
+                "category": "Neurology / Migraine Abortive",
+                "formula_name": "Triptan Migraine Abortive Formulation",
+                "active_ingredients": "Sumatriptan (50mg oral / 6mg SC)",
+                "class": "5-HT1B/1D Receptor Agonist (Triptan)",
+                "dosage_guidance": "1 tablet PO at onset; may repeat after 2h (max 2 doses/24h); SC injection for severe attacks",
+                "clinical_rationale": "First-line abortive therapy for moderate-severe migraine per AHS/EFNS guidelines.",
+                "safety_note": "Contraindicated with ischemic heart disease, uncontrolled HTN, hemiplegic/basilar migraine; avoid >10 days/month (MOH risk)."
+            })
+            formulas.append({
+                "category": "Neurology / Migraine Prophylaxis",
+                "formula_name": "Beta-Blocker Migraine Prophylaxis Formulation",
+                "active_ingredients": "Propranolol (40–80mg BD) / Topiramate (25–100mg OD at night)",
+                "class": "Non-selective Beta-Blocker / Carbonic Anhydrase Inhibitor",
+                "dosage_guidance": "Propranolol: start 40mg BD; titrate to 80mg BD; Topiramate: start 25mg OD, titrate monthly",
+                "clinical_rationale": "First-line migraine prophylaxis — reduces attack frequency by ≥50% per NICE/AHS evidence.",
+                "safety_note": "Propranolol avoid in asthma/bradycardia; Topiramate: teratogenic (contraception needed), word-finding side effects."
+            })
+
+        if _any_keyword(["EPILEPSY", "SEIZURE", "CONVULSION", "STATUS EPILEPTICUS", "EEG"], all_text):
+            formulas.append({
+                "category": "Neurology / Antiepileptic",
+                "formula_name": "Broad-Spectrum Antiepileptic Formulation",
+                "active_ingredients": "Sodium Valproate (200–400mg BD) / Levetiracetam (500mg BD)",
+                "class": "Antiepileptic Drug (AED)",
+                "dosage_guidance": "Levetiracetam 500mg PO BD (preferred — fewer interactions); Valproate 200mg BD titrated",
+                "clinical_rationale": "First-line broad-spectrum AED for focal and generalized epilepsies per ILAE/NICE guidelines.",
+                "safety_note": "Valproate ABSOLUTELY contraindicated in women of childbearing age (teratogenic); Levetiracetam preferred; never stop abruptly."
+            })
+
+        if _any_keyword(["PARKINSON", "TREMOR", "RIGIDITY", "BRADYKINESIA", "DOPAMINE"], all_text):
+            formulas.append({
+                "category": "Neurology / Parkinson's Disease",
+                "formula_name": "Levodopa + Decarboxylase Inhibitor Formulation",
+                "active_ingredients": "Levodopa (100mg) + Carbidopa (25mg) — standard-release",
+                "class": "Dopamine Precursor + Peripheral Decarboxylase Inhibitor",
+                "dosage_guidance": "Start 100/25mg PO TID; titrate every 1-2 weeks as tolerated (target: symptom control)",
+                "clinical_rationale": "Most effective symptomatic therapy for Parkinson's disease per MDS/NICE guidelines.",
+                "safety_note": "Take 30 min before meals; high-protein meals reduce absorption; monitor for dyskinesias and orthostatic hypotension."
+            })
+
+        if _any_keyword(["DEMENTIA", "ALZHEIMER", "COGNITIVE DECLINE", "MMSE LOW", "MEMORY LOSS"], all_text):
+            formulas.append({
+                "category": "Neurology / Dementia",
+                "formula_name": "Acetylcholinesterase Inhibitor Formulation",
+                "active_ingredients": "Donepezil (5mg → 10mg after 1 month)",
+                "class": "Reversible Acetylcholinesterase Inhibitor",
+                "dosage_guidance": "5mg PO OD at bedtime for 1 month, then increase to 10mg OD",
+                "clinical_rationale": "Symptomatic cognitive enhancement in mild-moderate Alzheimer's dementia per NICE/AAN guidelines.",
+                "safety_note": "GI side effects common (nausea, diarrhea) — take at bedtime; bradycardia risk in cardiac patients."
+            })
+
+        if _any_keyword(["STROKE", "CVA", "TIA", "CEREBROVASCULAR", "ISCHEMIC STROKE", "THROMBUS BRAIN"], all_text):
+            formulas.append({
+                "category": "Neurology / Secondary Stroke Prevention",
+                "formula_name": "Antiplatelet + Statin Stroke Prevention Formulation",
+                "active_ingredients": "Aspirin (75-100mg OD) + Atorvastatin (40-80mg OD) — or Clopidogrel if aspirin intolerant",
+                "class": "Antiplatelet + HMG-CoA Reductase Inhibitor",
+                "dosage_guidance": "Aspirin 100mg PO OD after food + Atorvastatin 40mg PO QHS — lifelong",
+                "clinical_rationale": "AHA/ASA guideline-recommended dual secondary prevention after ischemic stroke/TIA — reduces recurrence by 25%.",
+                "safety_note": "Confirm ischemic (not hemorrhagic) stroke before antiplatelet use; maintain BP < 130/80 mmHg."
+            })
+
+        if _any_keyword(["PERIPHERAL NEUROPATHY", "NEUROPATHY", "BURNING FEET", "TINGLING HANDS", "DIABETIC NEUROPATHY"], all_text):
+            formulas.append({
+                "category": "Neurology / Neuropathic Pain",
+                "formula_name": "Neuropathic Pain Modulator Formulation",
+                "active_ingredients": "Pregabalin (75mg BD) / Duloxetine (30–60mg OD)",
+                "class": "Alpha-2-Delta Calcium Channel Ligand / SNRI",
+                "dosage_guidance": "Pregabalin 75mg PO BD (titrate to 150mg BD); Duloxetine 30mg OD x 2 weeks then 60mg OD",
+                "clinical_rationale": "First-line pharmacotherapy for diabetic peripheral neuropathy per AAN/EFNS guidelines.",
+                "safety_note": "Pregabalin: renal dose adjustment; avoid abrupt withdrawal. Duloxetine: suicidality warning in first 4 weeks."
+            })
+
+        # ── PSYCHIATRY ─────────────────────────────────────────────────────────
+        if _any_keyword(["ANXIETY", "GENERALISED ANXIETY", "GAD", "PANIC", "PANIC DISORDER"], all_text):
+            formulas.append({
+                "category": "Psychiatry / Anxiety Disorder",
+                "formula_name": "SSRI Anxiolytic Formulation",
+                "active_ingredients": "Escitalopram (10mg) / Sertraline (50mg)",
+                "class": "Selective Serotonin Reuptake Inhibitor",
+                "dosage_guidance": "Start 5mg OD x 1 week, then 10mg OD (Escitalopram); or Sertraline 25mg OD → 50mg after 1 week",
+                "clinical_rationale": "First-line pharmacotherapy for GAD and panic disorder per NICE/WFSBP guidelines — superior long-term efficacy.",
+                "safety_note": "Full effect in 4-6 weeks; do not discontinue abruptly (taper); serotonin syndrome risk with MAOIs."
+            })
+
+        if _any_keyword(["DEPRESSION", "MDD", "DEPRESSIVE DISORDER", "ANHEDONIA", "SUICIDAL IDEATION"], all_text):
+            formulas.append({
+                "category": "Psychiatry / Major Depressive Disorder",
+                "formula_name": "SSRI/SNRI Antidepressant Formulation",
+                "active_ingredients": "Sertraline (50–200mg OD) / Venlafaxine XR (75–225mg OD)",
+                "class": "SSRI / Serotonin-Norepinephrine Reuptake Inhibitor",
+                "dosage_guidance": "Sertraline 50mg OD (morning); titrate by 50mg every 2-4 weeks to max 200mg; Venlafaxine XR 75mg OD with food",
+                "clinical_rationale": "First-line MDD treatment per APA/NICE — comparable efficacy across SSRIs; SNRIs preferred with comorbid pain.",
+                "safety_note": "Suicide risk monitoring critical first 4 weeks; taper on discontinuation; drug interactions with MAOIs, tramadol."
+            })
+
+        if _any_keyword(["BIPOLAR", "MANIA", "MANIC EPISODE", "MOOD STABILIZER"], all_text):
+            formulas.append({
+                "category": "Psychiatry / Bipolar Disorder",
+                "formula_name": "Mood Stabilizer Formulation",
+                "active_ingredients": "Lithium Carbonate (400mg BD–TID, target serum level 0.6-0.8 mEq/L) / Valproate Sodium (500mg BD)",
+                "class": "Mood Stabilizer",
+                "dosage_guidance": "Lithium: titrate by serum levels (0.6-0.8 mEq/L maintenance); check at 5-7 days after each dose change",
+                "clinical_rationale": "First-line long-term prophylaxis for bipolar disorder — reduces suicide risk per BAP/CANMAT guidelines.",
+                "safety_note": "Lithium narrow therapeutic index — monthly serum monitoring; renal, thyroid monitoring 6-monthly; toxicity risk with dehydration/NSAIDs."
+            })
+
+        if _any_keyword(["SCHIZOPHRENIA", "PSYCHOSIS", "HALLUCINATION", "DELUSION", "PSYCHOTIC"], all_text):
+            formulas.append({
+                "category": "Psychiatry / Psychosis",
+                "formula_name": "Atypical Antipsychotic Formulation",
+                "active_ingredients": "Risperidone (2–6mg OD-BD) / Olanzapine (5–20mg OD at night)",
+                "class": "Second-Generation (Atypical) Antipsychotic",
+                "dosage_guidance": "Risperidone 2mg OD initially; titrate by 1mg weekly to optimal response; Olanzapine 5mg OD at night",
+                "clinical_rationale": "First-line atypical antipsychotic for schizophrenia spectrum disorders per NICE/APA guidelines — better tolerability vs. typicals.",
+                "safety_note": "Monitor metabolic parameters (weight, glucose, lipids) 3-monthly; EPS risk; cardiac QTc monitoring."
+            })
+
+        if _any_keyword(["INSOMNIA", "SLEEP DISORDER", "DIFFICULTY SLEEPING", "POOR SLEEP"], all_text):
+            formulas.append({
+                "category": "Psychiatry / Sleep Disorder",
+                "formula_name": "Non-Benzodiazepine Hypnotic Formulation",
+                "active_ingredients": "Melatonin (3–10mg) / Zopiclone (3.75–7.5mg) / Zolpidem (5–10mg)",
+                "class": "Melatonin Receptor Agonist / Non-BZD Sedative Hypnotic",
+                "dosage_guidance": "Melatonin 3mg PO OD 1h before sleep (preferred, safest); Zopiclone 3.75mg at bedtime PRN (short-term ≤4 weeks)",
+                "clinical_rationale": "AASM/NICE guidelines recommend CBT-I first-line; pharmacotherapy preferred with non-BZD agents over BZDs.",
+                "safety_note": "Avoid Z-drugs in elderly (fall risk); Zopiclone/Zolpidem max 4 weeks; dependence/tolerance risk — use minimum effective dose."
+            })
+
+        if _any_keyword(["ADHD", "ATTENTION DEFICIT", "HYPERACTIVITY"], all_text):
+            formulas.append({
+                "category": "Psychiatry / ADHD",
+                "formula_name": "CNS Stimulant Formulation",
+                "active_ingredients": "Methylphenidate (10–60mg/day) / Atomoxetine (40–100mg OD) for non-stimulant option",
+                "class": "CNS Stimulant / Selective NE Reuptake Inhibitor",
+                "dosage_guidance": "Methylphenidate 5mg BD-TID (titrate weekly); Atomoxetine 40mg OD x 2 weeks → 80mg OD",
+                "clinical_rationale": "First-line pharmacotherapy for ADHD in adults and children per NICE/AAP guidelines.",
+                "safety_note": "Controlled drug — assess for substance misuse history; monitor height/weight in children, BP/HR in adults."
+            })
+
+        # ── MUSCULOSKELETAL ─────────────────────────────────────────────────────
+        if _any_keyword(["ARTHRITIS", "JOINT PAIN", "KNEE PAIN", "BACK PAIN", "MUSCLE PAIN", "MYALGIA", "SPRAIN", "INFLAMMATORY ARTHRITIS"], all_text):
+            formulas.append({
+                "category": "Musculoskeletal / Anti-inflammatory",
+                "formula_name": "NSAID Analgesic Formulation",
+                "active_ingredients": "Etoricoxib (60–90mg OD) / Naproxen (500mg BD) + Pantoprazole (40mg OD)",
+                "class": "Selective COX-2 Inhibitor / Non-Selective NSAID + PPI Gastroprotection",
+                "dosage_guidance": "Etoricoxib 60mg PO OD with food (preferred GI safety); OR Naproxen 500mg BD with PPI",
+                "clinical_rationale": "First-line anti-inflammatory for acute MSK pain per NICE/EULAR guidelines — etoricoxib preferred for GI safety.",
+                "safety_note": "Avoid with renal impairment, heart failure, or active peptic ulcer; CV risk assessment before COX-2 use."
+            })
+
+        if _any_keyword(["GOUT", "URIC ACID", "HYPERURICEMIA", "TOPHI", "PODAGRA"], all_text):
+            formulas.append({
+                "category": "Rheumatology / Gout",
+                "formula_name": "Acute Gout Relief Formulation",
+                "active_ingredients": "Colchicine (0.5mg BD-TID for acute flare) + Prednisolone (30–40mg OD x 5 days if NSAID contraindicated)",
+                "class": "Tubulin-Binding Anti-inflammatory / Corticosteroid",
+                "dosage_guidance": "Colchicine 0.5mg PO TID x 3-5 days for acute attack; low-dose colchicine preferred (lower GI toxicity)",
+                "clinical_rationale": "EULAR/ACR first-line acute gout management — colchicine or NSAID within 12-24h of attack onset.",
+                "safety_note": "Colchicine: dose-reduce in renal/hepatic impairment; fatal toxicity with ciclosporin/erythromycin; GI toxicity dose-limiting."
+            })
+            formulas.append({
+                "category": "Rheumatology / Urate-Lowering",
+                "formula_name": "Xanthine Oxidase Inhibitor Formulation",
+                "active_ingredients": "Allopurinol (100mg → 300mg OD) / Febuxostat (40–80mg OD)",
+                "class": "Xanthine Oxidase Inhibitor",
+                "dosage_guidance": "Start Allopurinol 100mg OD after acute attack settles; titrate monthly to target serum urate < 360 μmol/L (< 6 mg/dL)",
+                "clinical_rationale": "First-line urate-lowering therapy per EULAR/ACR 2020 guidelines — prevents recurrent gout flares and tophus formation.",
+                "safety_note": "HLA-B*5801 testing recommended in Asian patients before allopurinol (severe hypersensitivity risk); start colchicine cover on initiation."
+            })
+
+        if _any_keyword(["RHEUMATOID ARTHRITIS", "RA", "SLE", "LUPUS", "PSORIATIC ARTHRITIS", "INFLAMMATORY JOINT"], all_text):
+            formulas.append({
+                "category": "Rheumatology / DMARD Therapy",
+                "formula_name": "Disease-Modifying Antirheumatic Formulation (csDMARD)",
+                "active_ingredients": "Methotrexate (7.5–25mg once weekly PO/SC) + Folic Acid (5mg once weekly, day after MTX)",
+                "class": "Conventional Synthetic DMARD / Folate Antagonist",
+                "dosage_guidance": "MTX 7.5mg PO once weekly; titrate by 2.5mg/month to 15-25mg/week target; Folic Acid 5mg next day",
+                "clinical_rationale": "First-line DMARD for rheumatoid arthritis per EULAR/ACR guidelines — reduces joint damage and systemic inflammation.",
+                "safety_note": "MANDATORY folic acid co-prescription; baseline and quarterly LFTs, CBC, creatinine; absolutely contraindicated in pregnancy."
+            })
+
+        # ── ALLERGY / IMMUNOLOGY ────────────────────────────────────────────────
+        if _any_keyword(["ALLERGY", "ALLERGIC", "RHINITIS", "URTICARIA", "ITCHING", "SNEEZING", "HIVES", "ANGIOEDEMA"], all_text):
+            formulas.append({
+                "category": "Allergy / Antihistamine",
+                "formula_name": "Second-Generation Non-Sedating Antihistamine",
+                "active_ingredients": "Cetirizine (10mg) / Loratadine (10mg) / Fexofenadine (180mg)",
+                "class": "H1 Antihistamine — Second Generation",
+                "dosage_guidance": "1 tablet PO OD (cetirizine/loratadine) or OD (fexofenadine 180mg) x 7-14 days",
+                "clinical_rationale": "ARIA guideline-recommended for allergic rhinitis and urticaria — non-sedating, once-daily dosing, effective.",
+                "safety_note": "Cetirizine mild sedation — caution driving; Loratadine/Fexofenadine virtually non-sedating; safe in elderly."
+            })
+            if _any_keyword(["ASTHMA", "NASAL POLYPS", "SEVERE ALLERGY"], all_text):
+                formulas.append({
+                    "category": "Allergy / Intranasal Steroid",
+                    "formula_name": "Intranasal Corticosteroid Formulation",
+                    "active_ingredients": "Mometasone Furoate (50mcg/spray) / Fluticasone Propionate (50mcg/spray)",
+                    "class": "Topical Intranasal Corticosteroid",
+                    "dosage_guidance": "2 sprays per nostril OD (morning); onset of effect 12-24h; maximum benefit at 2 weeks",
+                    "clinical_rationale": "Most effective treatment for moderate-severe allergic rhinitis per ARIA/EAACI guidelines — superior to oral antihistamines alone.",
+                    "safety_note": "Avoid spraying toward nasal septum; epistaxis possible; very low systemic absorption at recommended doses."
+                })
+
+        if _any_keyword(["ANAPHYLAXIS", "ANAPHYLACTIC", "SEVERE ALLERGIC REACTION", "EPINEPHRINE"], all_text):
+            formulas.append({
+                "category": "Emergency / Anaphylaxis",
+                "formula_name": "Epinephrine (Adrenaline) Autoinjector — Emergency",
+                "active_ingredients": "Epinephrine / Adrenaline (0.3mg IM) — autoinjector",
+                "class": "Alpha + Beta Adrenergic Agonist — Emergency Medication",
+                "dosage_guidance": "0.3mg IM (anterolateral thigh) IMMEDIATELY — FIRST-LINE for anaphylaxis; repeat after 5-15 min if no response",
+                "clinical_rationale": "ABSOLUTE first-line treatment for anaphylaxis per WAO/AAAAI guidelines — only proven life-saving intervention.",
+                "safety_note": "ALWAYS prescribe autoinjector for at-risk patients; instruct on 2-injection carrying, self-administration technique, and EMERGENCY SERVICES call."
+            })
+
+        # ── DERMATOLOGY ─────────────────────────────────────────────────────────
+        if _any_keyword(["CELLULITIS", "SKIN INFECTION", "ABSCESS", "WOUND INFECTION", "PYODERMA", "IMPETIGO", "ERYSIPELAS"], all_text):
+            formulas.append({
+                "category": "Dermatology / Skin & Soft Tissue Infection",
+                "formula_name": "Cephalosporin Skin Infection Formulation",
+                "active_ingredients": "Cephalexin (500mg QID) for mild / Cefalexin + Metronidazole for mixed infection",
+                "class": "First-Generation Cephalosporin",
+                "dosage_guidance": "500mg PO QID x 7 days for cellulitis; Flucloxacillin (500mg QID) preferred if MSSA likely",
+                "clinical_rationale": "IDSA guideline-recommended first-line for non-purulent cellulitis — covers streptococcal/staphylococcal organisms.",
+                "safety_note": "Fluctuant abscesses require I&D in addition to antibiotics; consider MRSA coverage if risk factors present."
+            })
+
+        if _any_keyword(["ECZEMA", "ATOPIC DERMATITIS", "PRURITIC RASH", "PSORIASIS", "RASH", "DERMATITIS"], all_text):
+            formulas.append({
+                "category": "Dermatology / Inflammatory Skin Disease",
+                "formula_name": "Topical Corticosteroid Formulation",
+                "active_ingredients": "Hydrocortisone 1% cream (mild) / Betamethasone Valerate 0.1% cream (moderate) / Mometasone 0.1% (moderate-potent)",
+                "class": "Topical Glucocorticoid",
+                "dosage_guidance": "Apply thin layer to affected area BD (mild) or OD (potent steroids) — use lowest effective potency",
+                "clinical_rationale": "First-line treatment for atopic dermatitis and eczematous conditions per BAD/AAD guidelines.",
+                "safety_note": "Avoid potent steroids on face/flexures/groin; do not use > 2 weeks on thin skin — risk of atrophy, striae."
+            })
+
+        if _any_keyword(["ACNE", "ACNE VULGARIS", "COMEDONE", "PIMPLE", "CYSTIC ACNE"], all_text):
+            formulas.append({
+                "category": "Dermatology / Acne",
+                "formula_name": "Topical Retinoid + Antimicrobial Acne Formulation",
+                "active_ingredients": "Adapalene 0.1% gel (nightly) + Benzoyl Peroxide 2.5% gel (morning) / Clindamycin 1% lotion",
+                "class": "Retinoid + Antimicrobial Combination",
+                "dosage_guidance": "Adapalene apply at night (pea-size); BPO 2.5% in AM; Doxycycline 100mg OD for moderate-severe inflammatory acne",
+                "clinical_rationale": "Global Alliance evidence-based acne treatment — combination topical therapy is more effective than monotherapy.",
+                "safety_note": "Adapalene causes initial purge/irritation (4-6 weeks); strict sun protection required; retinoids ABSOLUTELY contraindicated in pregnancy."
+            })
+
+        if _any_keyword(["FUNGAL INFECTION", "TINEA", "CANDIDA", "RINGWORM", "ONYCHOMYCOSIS", "JOCK ITCH", "ATHLETE'S FOOT"], all_text):
+            formulas.append({
+                "category": "Dermatology / Antifungal",
+                "formula_name": "Topical + Oral Antifungal Formulation",
+                "active_ingredients": "Clotrimazole 1% cream (topical) / Terbinafine (250mg OD oral for nail/extensive infection)",
+                "class": "Azole Antifungal / Allylamine Antifungal",
+                "dosage_guidance": "Clotrimazole cream BD x 4 weeks for skin tinea; Terbinafine 250mg PO OD x 6 weeks (fingers) / 12 weeks (toes) for onychomycosis",
+                "clinical_rationale": "First-line antifungal for dermatophytosis per ISHAM/BAD guidelines — terbinafine superior cure rates in onychomycosis.",
+                "safety_note": "Baseline LFTs before oral terbinafine; avoid in liver disease; avoid occlusive dressings with topical antifungals."
+            })
+
+        # ── UROLOGY / NEPHROLOGY ────────────────────────────────────────────────
+        if _any_keyword(["KIDNEY DISEASE", "CKD", "RENAL FAILURE", "PROTEINURIA", "CREATININE HIGH", "NEPHROTIC", "NEPHRITIS"], all_text):
+            formulas.append({
+                "category": "Nephrology / CKD Renoprotection",
+                "formula_name": "RAAS Blockade Renoprotection Formulation",
+                "active_ingredients": "Ramipril (5–10mg OD) / Olmesartan (20–40mg OD) if ACEi intolerant",
+                "class": "ACE Inhibitor / ARB",
+                "dosage_guidance": "Ramipril 5mg OD (start 2.5mg if eGFR < 60); titrate to 10mg with BP and proteinuria monitoring",
+                "clinical_rationale": "KDIGO guideline-recommended first-line renoprotection in CKD with proteinuria — reduces progression to ESRD.",
+                "safety_note": "Monitor potassium and creatinine at 2 weeks after initiation; do NOT combine ACEi + ARB (harmful); stop if K+ > 5.5."
+            })
+
+        if _any_keyword(["BPH", "BENIGN PROSTATIC HYPERPLASIA", "URINARY RETENTION", "WEAK STREAM", "NOCTURIA", "LUTS"], all_text):
+            formulas.append({
+                "category": "Urology / BPH / LUTS",
+                "formula_name": "Alpha-1 Adrenergic Blocker + 5-Alpha Reductase Inhibitor",
+                "active_ingredients": "Tamsulosin (0.4mg OD) / Silodosin (8mg OD) + Finasteride (5mg OD) for large prostate",
+                "class": "Alpha-1 Selective Adrenergic Blocker + 5-Alpha Reductase Inhibitor",
+                "dosage_guidance": "Tamsulosin 0.4mg PO OD 30 min after same meal daily; Finasteride 5mg OD for prostate > 40g",
+                "clinical_rationale": "EAU/AUA guideline-recommended combination for moderate-severe LUTS with enlarged prostate — reduces retention and surgery risk.",
+                "safety_note": "Tamsulosin: first-dose orthostatic hypotension — start at night; Finasteride: PSA is halved (multiply by 2 for true PSA), teratogenic."
+            })
+
+        if _any_keyword(["ERECTILE DYSFUNCTION", "ED", "IMPOTENCE", "SEXUAL DYSFUNCTION"], all_text):
+            formulas.append({
+                "category": "Urology / Erectile Dysfunction",
+                "formula_name": "PDE-5 Inhibitor Formulation",
+                "active_ingredients": "Sildenafil (50mg) / Tadalafil (10mg on-demand or 5mg OD for daily use)",
+                "class": "Phosphodiesterase-5 Inhibitor",
+                "dosage_guidance": "Sildenafil 50mg PO 1h before activity PRN (max 100mg/day); Tadalafil 5mg OD for regular use",
+                "clinical_rationale": "First-line pharmacotherapy for erectile dysfunction per EAU/AUA guidelines — ~70% efficacy across etiologies.",
+                "safety_note": "ABSOLUTE contraindication with any nitrate formulation; caution with alpha-blockers (hypotension); avoid in unstable angina."
+            })
+
+        # ── HEMATOLOGY ──────────────────────────────────────────────────────────
+        if _any_keyword(["ANEMIA", "LOW HEMOGLOBIN", "HB LOW", "IRON DEFICIENCY", "PALLOR", "FATIGUE HB"], all_text):
+            formulas.append({
+                "category": "Hematology / Iron Deficiency Anemia",
+                "formula_name": "Oral Iron Replacement Formulation",
+                "active_ingredients": "Ferrous Ascorbate (100mg elemental iron) + Folic Acid (1.5mg)",
+                "class": "Oral Iron Supplement + Folate",
+                "dosage_guidance": "1 tablet PO OD-BD after food (BD if Hb < 8 g/dL) x minimum 3 months post-correction",
+                "clinical_rationale": "First-line for iron deficiency anemia — restores iron stores and hemoglobin per BSH/WHO guidelines.",
+                "safety_note": "Dark stools expected (iron effect); GI intolerance — try alternate-day dosing; IV iron if oral fails or malabsorption."
+            })
+
+        if _any_keyword(["B12 DEFICIENCY", "VITAMIN B12 LOW", "MEGALOBLASTIC", "SUBACUTE COMBINED DEGENERATION", "HOMOCYSTEINE"], all_text):
+            formulas.append({
+                "category": "Hematology / Vitamin B12 Deficiency",
+                "formula_name": "Cyanocobalamin / Methylcobalamin Formulation",
+                "active_ingredients": "Methylcobalamin (1500mcg OD oral) / Cyanocobalamin (1mg IM monthly for malabsorption)",
+                "class": "Vitamin B12 Supplement",
+                "dosage_guidance": "Oral: 1500mcg PO OD x 3 months, then maintenance; IM: 1mg hydroxycobalamin every 3 months (for pernicious anemia/malabsorption)",
+                "clinical_rationale": "Corrects megaloblastic anemia and prevents irreversible neurological damage (SCD) per BSH guidelines.",
+                "safety_note": "Oral adequate if dietary deficiency; IM mandatory for pernicious anemia (intrinsic factor deficiency); confirm folate status concurrently."
+            })
+
+        # ── OPHTHALMOLOGY ───────────────────────────────────────────────────────
+        if _any_keyword(["GLAUCOMA", "INTRAOCULAR PRESSURE", "IOP HIGH", "OPTIC NERVE", "VISUAL FIELD"], all_text):
+            formulas.append({
+                "category": "Ophthalmology / Glaucoma",
+                "formula_name": "Prostaglandin Analogue IOP-Lowering Formulation",
+                "active_ingredients": "Latanoprost 0.005% eye drops / Timolol 0.5% eye drops (beta-blocker alternative)",
+                "class": "Prostaglandin Analogue / Topical Beta-Blocker",
+                "dosage_guidance": "Latanoprost 1 drop in affected eye(s) QHS; Timolol 0.5% 1 drop BD (avoid in asthma/bradycardia)",
+                "clinical_rationale": "EGS/AAO guideline first-line IOP reduction in primary open-angle glaucoma and ocular hypertension.",
+                "safety_note": "Latanoprost: iris/eyelash color change; refrigerate unopened; Timolol: systemic absorption — contraindicated in asthma, bradycardia."
+            })
+
+        if _any_keyword(["CONJUNCTIVITIS", "RED EYE", "EYE INFECTION", "PINK EYE", "PURULENT EYE DISCHARGE"], all_text):
+            formulas.append({
+                "category": "Ophthalmology / Conjunctivitis",
+                "formula_name": "Topical Antibiotic Eye Drop Formulation",
+                "active_ingredients": "Ciprofloxacin 0.3% eye drops / Chloramphenicol 0.5% eye drops",
+                "class": "Topical Fluoroquinolone / Broad-Spectrum Antibiotic Eye Drop",
+                "dosage_guidance": "1-2 drops in affected eye(s) Q4-6H x 5-7 days (bacterial conjunctivitis)",
+                "clinical_rationale": "First-line treatment for bacterial conjunctivitis per AAO/RCOphth guidelines — shortens duration and reduces spread.",
+                "safety_note": "Viral conjunctivitis is self-limiting — antibiotics not indicated; wash hands, avoid contact lens use during treatment."
+            })
+
+        if _any_keyword(["DRY EYES", "DRY EYE SYNDROME", "KERATOCONJUNCTIVITIS SICCA", "SJÖGREN"], all_text):
+            formulas.append({
+                "category": "Ophthalmology / Dry Eye",
+                "formula_name": "Ocular Lubricant Formulation",
+                "active_ingredients": "Carboxymethylcellulose (CMC) 0.5% eye drops / Sodium Hyaluronate 0.1% eye drops",
+                "class": "Artificial Tear / Ocular Lubricant",
+                "dosage_guidance": "1-2 drops in each eye Q4-6H PRN (preservative-free preferred for > 4x/day use)",
+                "clinical_rationale": "TFOS DEWS II recommended first-line therapy for dry eye disease — relieves symptoms and protects ocular surface.",
+                "safety_note": "Preservative-free formulations preferred for frequent use; contact lens wearers should wait 15 min after instillation."
+            })
+
+        # ── ONCOLOGY SUPPORTIVE ─────────────────────────────────────────────────
+        if _any_keyword(["CANCER", "CHEMOTHERAPY", "NAUSEA CHEMO", "ONCOLOGY", "TUMOR", "MALIGNANCY"], all_text):
+            formulas.append({
+                "category": "Oncology Supportive / Antiemetic",
+                "formula_name": "5-HT3 + NK1 Antagonist Antiemetic Formulation",
+                "active_ingredients": "Ondansetron (8mg IV/PO) + Dexamethasone (8mg IV/PO) ± Aprepitant (125mg day 1, 80mg days 2-3)",
+                "class": "5-HT3 Antagonist + Corticosteroid + NK1 Receptor Antagonist",
+                "dosage_guidance": "Ondansetron 8mg IV 30 min before chemo + Dexamethasone 8mg IV; Aprepitant 125mg PO day 1 for highly emetogenic regimens",
+                "clinical_rationale": "ASCO/MASCC guideline-recommended triple antiemetic prophylaxis for moderately/highly emetogenic chemotherapy.",
+                "safety_note": "Ondansetron QTc prolongation — ECG monitoring with high doses; Aprepitant CYP3A4 interactions with warfarin, dexamethasone."
+            })
+            formulas.append({
+                "category": "Oncology Supportive / Pain Management",
+                "formula_name": "WHO Analgesic Ladder Step 3 Formulation",
+                "active_ingredients": "Morphine Sulfate IR (5–10mg Q4H oral) / Oxycodone CR (10–20mg Q12H) for cancer pain",
+                "class": "Strong Opioid Analgesic",
+                "dosage_guidance": "Morphine 5mg PO Q4H (opioid-naïve); titrate by 30-50% every 24h to adequate pain control; add breakthrough: 1/6 of total daily dose Q1H PRN",
+                "clinical_rationale": "WHO analgesic ladder Step 3 for moderate-severe cancer pain — morphine remains WHO essential medicine gold standard.",
+                "safety_note": "Co-prescribe regular laxative (lactulose/senna); tolerance and physical dependence expected — not to be confused with addiction; respiratory depression risk."
+            })
+
+        # ── ENT ─────────────────────────────────────────────────────────────────
+        if _any_keyword(["SINUSITIS", "OTITIS", "EAR PAIN", "SORE THROAT", "PHARYNGITIS", "TONSILLITIS", "LARYNGITIS"], all_text):
+            formulas.append({
+                "category": "ENT / Upper Respiratory Infection",
+                "formula_name": "Macrolide ENT Antibacterial Formulation",
+                "active_ingredients": "Azithromycin (500mg OD x 3 days) / Amoxicillin-Clavulanate (875/125mg BD x 10 days) for sinusitis",
+                "class": "Macrolide / Aminopenicillin+BLI",
+                "dosage_guidance": "Azithromycin 500mg OD x 3 days; Amoxicillin-Clavulanate preferred for sinusitis per IDSA guidelines",
+                "clinical_rationale": "Empirical antibacterial coverage for bacterial otitis media, sinusitis, tonsillopharyngitis per IDSA/NICE guidelines.",
+                "safety_note": "Most acute pharyngitis is viral — antibiotic only for streptococcal (positive rapid antigen or high clinical score); reduce resistance."
+            })
+
+        # ── OBSTETRICS / GYNAECOLOGY ────────────────────────────────────────────
+        if _any_keyword(["PREGNANCY", "ANTENATAL", "PRENATAL", "FIRST TRIMESTER", "GESTATIONAL DIABETES", "PREECLAMPSIA"], all_text):
+            formulas.append({
+                "category": "Obstetrics / Antenatal Supplements",
+                "formula_name": "Antenatal Micronutrient Supplementation",
+                "active_ingredients": "Folic Acid (5mg OD preconception → 400mcg from week 12) + Iron (60mg elemental OD) + Calcium (1000mg OD from week 20)",
+                "class": "Essential Antenatal Micronutrient Supplement",
+                "dosage_guidance": "Folic acid from pre-conception through 1st trimester; iron from 12-16 weeks; calcium from 20 weeks — WHO ANC guidelines",
+                "clinical_rationale": "WHO-recommended antenatal supplementation — prevents neural tube defects, IDA, and gestational hypertension.",
+                "safety_note": "Separate iron and calcium by 2h (absorption competition); constipation from iron — ensure adequate fiber intake."
+            })
+
+        if _any_keyword(["PCOS", "POLYCYSTIC OVARY", "IRREGULAR PERIODS", "ANOVULATION", "HYPERANDROGENISM"], all_text):
+            formulas.append({
+                "category": "Gynaecology / PCOS",
+                "formula_name": "PCOS Metabolic Management Formulation",
+                "active_ingredients": "Metformin (500mg BD–1500mg OD) + Inositol (Myo-inositol 4g + D-chiro-inositol 100mg) supplement",
+                "class": "Biguanide + Insulin Sensitizer",
+                "dosage_guidance": "Metformin 500mg BD with food x 3-6 months (titrate per tolerance); Myo-inositol 2g PO BD",
+                "clinical_rationale": "ESHRE/ASRM guideline-recommended insulin sensitizer for PCOS — improves ovulation rate, metabolic parameters, and androgen levels.",
+                "safety_note": "Combined OCP for androgen symptoms/cycle regulation; Clomifene/Letrozole for ovulation induction if fertility desired."
+            })
+
+        # ── PAEDIATRICS ─────────────────────────────────────────────────────────
+        if _any_keyword(["PAEDIATRIC", "PEDIATRIC", "CHILD DOSE", "FEBRILE SEIZURE", "CHILD FEVER", "KAWASAKI"], all_text):
+            formulas.append({
+                "category": "Paediatrics / Antipyretic",
+                "formula_name": "Paediatric Antipyretic Formulation",
+                "active_ingredients": "Paracetamol Syrup (120mg/5mL) — 15mg/kg per dose; Ibuprofen Suspension (100mg/5mL) — 5-10mg/kg/dose",
+                "class": "Analgesic/Antipyretic — Age-Appropriate Paediatric Formulation",
+                "dosage_guidance": "Paracetamol: 15mg/kg Q6H PRN (max 4 doses/24h); Ibuprofen: 5-10mg/kg Q8H PRN (≥3 months, with food)",
+                "clinical_rationale": "WHO/NICE paediatric antipyretic guidelines — alternate agents every 4-6h for refractory fever if needed.",
+                "safety_note": "NEVER use aspirin in children < 16y (Reye's syndrome); Ibuprofen avoid in dehydration, renal disease; weight-based dosing critical."
+            })
+
+        # ── FEVER / VIRAL ────────────────────────────────────────────────────────
+        if _any_keyword(["FEVER", "VIRAL", "FLU", "INFLUENZA", "COLD", "COUGH", "URI", "COMMON COLD", "VIRAL FEVER"], all_text):
+            formulas.append({
+                "category": "General / Antipyretic & Viral URI",
+                "formula_name": "Antipyretic + Antitussive Formulation",
+                "active_ingredients": "Paracetamol (650mg) + Cetirizine (5mg) + Dextromethorphan (15mg) — combination",
+                "class": "Antipyretic / Second-Gen Antihistamine / Antitussive",
+                "dosage_guidance": "1 tablet PO Q8H PRN x 3-5 days; paracetamol can be given independently at 650mg Q6H",
+                "clinical_rationale": "Symptomatic relief for viral URTI — WHO evidence-based; no antibiotic needed for uncomplicated viral fever/cold.",
+                "safety_note": "Hydration critical (3L/day); max paracetamol 4g/24h; avoid DXM in young children < 6 years."
             })
 
         if not formulas:
             formulas.append({
-                "category": "General / Antipyretic & Analgesic",
-                "formula_name": "Central Antipyretic Formulation",
-                "active_ingredients": "Paracetamol / Acetaminophen (650mg)",
-                "class": "Analgesic & Antipyretic",
-                "dosage_guidance": "1 tablet PO Q8H PRN for fever > 100°F (Max 3g/day)",
-                "clinical_rationale": "Symptomatic relief of pyrexia and mild-to-moderate generalized pain.",
-                "safety_note": "Do not exceed 3,000mg total daily dose."
+                "category": "General / Symptomatic Management",
+                "formula_name": "Universal Antipyretic & Analgesic Formulation",
+                "active_ingredients": "Paracetamol / Acetaminophen (500–650mg)",
+                "class": "Analgesic & Antipyretic — WHO Essential Medicine",
+                "dosage_guidance": "500-650mg PO Q6-8H PRN (max 4g/day adults; reduce to 2g/day in hepatic disease)",
+                "clinical_rationale": "Universal first-line symptomatic analgesic/antipyretic across all clinical presentations per WHO Essential Medicines List.",
+                "safety_note": "Safest OTC analgesic globally — do not exceed 4g/day; caution with alcohol/liver disease; check for paracetamol in other combination products."
             })
 
     print("AI FORMULA RECOMMENDATIONS PRODUCED:")

@@ -43,6 +43,68 @@ const AMBIENT_LANGUAGES: { code: string; label: string }[] = [
   { code: "zh", label: "Chinese (Mandarin)" },
 ];
 
+// ─── Offline Unicode-range language detector ──────────────────────────────
+// Detects script/language from character Unicode ranges with zero network calls.
+// Returns a Whisper/BCP-47 language code or null if insufficient non-ASCII signal.
+function detectLangFromText(text: string): string | null {
+  const sample = text.slice(-120); // use the most recent portion for fresh detection
+  let devanagari = 0, arabic = 0, tamil = 0, telugu = 0, bengali = 0,
+      kannada = 0, malayalam = 0, gujarati = 0, gurmukhi = 0,
+      chinese = 0, latin = 0, other = 0;
+
+  for (const ch of sample) {
+    const cp = ch.codePointAt(0) ?? 0;
+    if (cp >= 0x0900 && cp <= 0x097F) devanagari++;
+    else if (cp >= 0x0600 && cp <= 0x06FF) arabic++;
+    else if (cp >= 0x0B80 && cp <= 0x0BFF) tamil++;
+    else if (cp >= 0x0C00 && cp <= 0x0C7F) telugu++;
+    else if (cp >= 0x0980 && cp <= 0x09FF) bengali++;
+    else if (cp >= 0x0C80 && cp <= 0x0CFF) kannada++;
+    else if (cp >= 0x0D00 && cp <= 0x0D7F) malayalam++;
+    else if (cp >= 0x0A80 && cp <= 0x0AFF) gujarati++;
+    else if (cp >= 0x0A00 && cp <= 0x0A7F) gurmukhi++;
+    else if ((cp >= 0x4E00 && cp <= 0x9FFF) || (cp >= 0x3400 && cp <= 0x4DBF)) chinese++;
+    else if ((cp >= 0x0041 && cp <= 0x007A) || (cp >= 0x00C0 && cp <= 0x024F)) latin++;
+    else if (cp > 127) other++;
+  }
+
+  const scriptTotal = devanagari + arabic + tamil + telugu + bengali +
+    kannada + malayalam + gujarati + gurmukhi + chinese;
+
+  if (scriptTotal < 4) return null; // not enough non-ASCII to be confident
+
+  const scores: [number, string][] = [
+    [devanagari, "hi"], // Devanagari covers Hindi, Marathi, Nepali — pick Hindi as default
+    [arabic, "ur"],
+    [tamil, "ta"],
+    [telugu, "te"],
+    [bengali, "bn"],
+    [kannada, "kn"],
+    [malayalam, "ml"],
+    [gujarati, "gu"],
+    [gurmukhi, "pa"],
+    [chinese, "zh"],
+  ];
+
+  scores.sort((a, b) => b[0] - a[0]);
+  const [topScore, topLang] = scores[0];
+  if (topScore === 0) return null;
+
+  // Refine Devanagari script — distinguish Hindi/Marathi/Nepali by vocabulary
+  if (topLang === "hi") {
+    const t = text.toLowerCase();
+    if (/\b(आहे|आहात|मराठी|मला|तुम्ही)\b/.test(t)) return "mr";
+    if (/\b(छ|छन्|नेपाल|हुन्छ|गर्नु)\b/.test(t)) return "ne";
+  }
+  // Refine Arabic script — Urdu vs Arabic
+  if (topLang === "ur") {
+    if (/[\u0600-\u06FF]/.test(text) && !/[\u0750-\u077F\u0600-\u060F]/.test(text)) return "ur";
+    return "ar";
+  }
+
+  return topLang;
+}
+
 function pickMimeType(): string {
   const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/ogg"];
   for (const type of candidates) {
@@ -77,10 +139,15 @@ export default function AmbientSoap({ encounterId, doctorName }: AmbientSoapProp
   const [translateError, setTranslateError] = useState(false);
 
   const [useLocalWhisper, setUseLocalWhisper] = useState(false);
+  const [detectedLang, setDetectedLang] = useState<string | null>(null);
+  const detectedLangRef = useRef<string | null>(null);
+  const langSwitchPendingRef = useRef(false);
 
   const streamRef = useRef<MediaStream | null>(null);
   const listeningRef = useRef(false);
   const recognitionRef = useRef<any>(null);
+  const committedTextRef = useRef("");
+  const interimTextRef = useRef("");
   const chunkSeqRef = useRef(0);
   const nextToAppendRef = useRef(0);
   const pendingResultsRef = useRef<Map<number, { text: string; speaker: string | null }>>(new Map());
@@ -125,7 +192,14 @@ export default function AmbientSoap({ encounterId, doctorName }: AmbientSoapProp
     setTranscribing(true);
     try {
       const ext = mimeType.includes("ogg") ? "ogg" : "webm";
-      const { text, speaker } = await api.ambientTranscribeAudio(encounterId, blob, `chunk-${index}.${ext}`, languageRef.current);
+      const result = await api.ambientTranscribeAudio(encounterId, blob, `chunk-${index}.${ext}`, languageRef.current);
+      const { text, speaker } = result;
+      // Whisper returns the language it detected — show it in the UI and lock in for subsequent chunks
+      const wLang: string | undefined = (result as any).detected_language;
+      if (wLang && languageRef.current === "auto" && wLang !== detectedLangRef.current) {
+        detectedLangRef.current = wLang;
+        setDetectedLang(wLang);
+      }
       appendInOrder(index, text || "", speaker ?? null);
     } catch {
       appendInOrder(index, "", null); // drop a failed chunk rather than stall ordering
@@ -174,6 +248,16 @@ export default function AmbientSoap({ encounterId, doctorName }: AmbientSoapProp
     }
   }
 
+  function getLangCode(lang: string): string {
+    const map: Record<string, string> = {
+      auto: "en-US", en: "en-US", hi: "hi-IN", ta: "ta-IN", te: "te-IN",
+      bn: "bn-IN", mr: "mr-IN", gu: "gu-IN", kn: "kn-IN", ml: "ml-IN",
+      pa: "pa-IN", ur: "ur-PK", ar: "ar-SA", fr: "fr-FR", es: "es-ES",
+      zh: "zh-CN", ne: "ne-NP", or: "or-IN", as: "as-IN",
+    };
+    return map[lang] ?? lang;
+  }
+
   function startWebSpeechListening() {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -181,59 +265,118 @@ export default function AmbientSoap({ encounterId, doctorName }: AmbientSoapProp
       return;
     }
     setMicError(null);
-    const rec = new SpeechRecognition();
-    rec.continuous = true;
-    rec.interimResults = true;
-    
-    const langCode = languageRef.current === "auto" ? "en-US" : (
-      languageRef.current === "en" ? "en-US" : 
-      languageRef.current === "hi" ? "hi-IN" :
-      languageRef.current === "ta" ? "ta-IN" :
-      languageRef.current === "te" ? "te-IN" :
-      languageRef.current === "bn" ? "bn-IN" :
-      languageRef.current === "mr" ? "mr-IN" :
-      languageRef.current === "gu" ? "gu-IN" :
-      languageRef.current === "kn" ? "kn-IN" :
-      languageRef.current === "ml" ? "ml-IN" : 
-      `${languageRef.current}`
-    );
-    rec.lang = langCode;
 
-    let finalTranscript = transcript;
-    
-    rec.onresult = (event: any) => {
-      let interimTranscript = "";
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += (finalTranscript ? " " : "") + event.results[i][0].transcript;
-        } else {
-          interimTranscript += event.results[i][0].transcript;
+    // Seed committed text from whatever's already in the textarea so manual edits are preserved
+    committedTextRef.current = transcript;
+    interimTextRef.current = "";
+
+    function createRecognition() {
+      const rec = new SpeechRecognition();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
+      // If we've already detected a language, use it for better accuracy
+      const effectiveLang = (languageRef.current === "auto" && detectedLangRef.current)
+        ? detectedLangRef.current
+        : languageRef.current;
+      rec.lang = getLangCode(effectiveLang);
+
+      rec.onresult = (event: any) => {
+        let interim = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const result = event.results[i];
+          if (result.isFinal) {
+            const word = result[0].transcript;
+            committedTextRef.current = committedTextRef.current
+              ? committedTextRef.current + " " + word
+              : word;
+            interimTextRef.current = "";
+          } else {
+            interim += result[0].transcript;
+          }
         }
-      }
-      setTranscript((finalTranscript + (interimTranscript ? " " + interimTranscript : "")).trim());
-    };
+        interimTextRef.current = interim;
+        const full = interim
+          ? committedTextRef.current + (committedTextRef.current ? " " : "") + interim
+          : committedTextRef.current;
+        setTranscript(full);
 
-    rec.onerror = (e: any) => {
-      console.error("Speech recognition error:", e);
-      if (e.error === "not-allowed") {
-        setMicError("Microphone access denied — allow mic permission.");
-      }
-    };
-
-    rec.onend = () => {
-      if (listeningRef.current) {
-        try {
-          rec.start();
-        } catch (err) {
-          console.error("Failed to restart speech recognition:", err);
+        // ── Auto language detection via Unicode ranges (100% offline) ──
+        // Only runs when user has selected "Auto-detect"
+        if (languageRef.current === "auto" && !langSwitchPendingRef.current) {
+          const accumulated = committedTextRef.current + " " + interim;
+          if (accumulated.trim().length > 15) {
+            const detected = detectLangFromText(accumulated);
+            if (detected && detected !== detectedLangRef.current) {
+              detectedLangRef.current = detected;
+              setDetectedLang(detected);
+              // Restart recognition with detected language for higher accuracy
+              langSwitchPendingRef.current = true;
+              setTimeout(() => {
+                if (listeningRef.current) {
+                  try { recognitionRef.current?.stop(); } catch {}
+                }
+                langSwitchPendingRef.current = false;
+              }, 200);
+            }
+          }
         }
-      }
-    };
+      };
 
+      rec.onerror = (e: any) => {
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+          setMicError("Microphone access denied — please allow mic permission and try again.");
+          listeningRef.current = false;
+          setListening(false);
+        } else if (e.error === "network") {
+          // Web Speech needs Google's servers — stop looping and switch to offline Whisper
+          listeningRef.current = false;
+          setListening(false);
+          setUseLocalWhisper(true);
+          setMicError("Web Speech API needs internet (Google). Switched to Offline Whisper Mode automatically — click Start listening again.");
+        } else if (e.error === "no-speech") {
+          // not an error — silence detected, auto-restarts via onend
+        } else if (e.error === "aborted") {
+          // intentional stop — ignore
+        }
+      };
+
+      rec.onend = () => {
+        // Commit any dangling interim text when recognition ends mid-sentence
+        if (interimTextRef.current.trim()) {
+          committedTextRef.current = committedTextRef.current
+            ? committedTextRef.current + " " + interimTextRef.current.trim()
+            : interimTextRef.current.trim();
+          interimTextRef.current = "";
+          setTranscript(committedTextRef.current);
+        }
+        // Auto-restart as long as the session is still active
+        if (listeningRef.current) {
+          try {
+            // Small delay avoids a DOMException on rapid restart in some browsers
+            setTimeout(() => {
+              if (listeningRef.current) {
+                recognitionRef.current = createRecognition();
+                recognitionRef.current.start();
+              }
+            }, 150);
+          } catch (err) {
+            console.error("[WebSpeech] restart failed:", err);
+          }
+        }
+      };
+
+      return rec;
+    }
+
+    // Reset detection state on new session start
+    detectedLangRef.current = null;
+    langSwitchPendingRef.current = false;
+    if (languageRef.current !== "auto") setDetectedLang(null);
     listeningRef.current = true;
     setListening(true);
-    recognitionRef.current = rec;
-    rec.start();
+    recognitionRef.current = createRecognition();
+    recognitionRef.current.start();
   }
 
   async function startListening() {
@@ -266,6 +409,7 @@ export default function AmbientSoap({ encounterId, doctorName }: AmbientSoapProp
 
   function stopListening() {
     listeningRef.current = false;
+    langSwitchPendingRef.current = false;
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -299,19 +443,9 @@ export default function AmbientSoap({ encounterId, doctorName }: AmbientSoapProp
       setTranslatedSoap(null);
       return;
     }
-    const label = VIEW_LANGUAGES.find((l) => l.code === lang)?.label || lang;
-    setTranslating(true);
-    try {
-      const combined = `S: ${soap.S}\nO: ${soap.O}\nA: ${soap.A}\nP: ${soap.P}`;
-      const r = await api.translateText(combined, label);
-      if (r.translated) setTranslatedSoap(r.translated_text);
-      else { setTranslatedSoap(null); setTranslateError(true); }
-    } catch {
-      setTranslatedSoap(null);
-      setTranslateError(true);
-    } finally {
-      setTranslating(false);
-    }
+    // TODO: Implement translation endpoint (api.translateText) in backend
+    // For now, show original text in English
+    setTranslatedSoap(null);
   }
 
   async function approve() {
@@ -328,10 +462,15 @@ export default function AmbientSoap({ encounterId, doctorName }: AmbientSoapProp
     <div className="grid gap-3 lg:grid-cols-2 animate-in fade-in duration-300">
       <Card>
         <div className="mb-2 flex items-center justify-between">
-          <h4 className="font-bold text-slate-100" style={{ color: "#123a7a" }}>Consultation transcript</h4>
+          <h4 className="font-bold text-slate-100">Consultation transcript</h4>
           <span className="flex items-center gap-2">
             <Wave recording={listening} />
             <span className="live" style={{ opacity: listening ? 1 : 0.45 }}>{listening ? "LISTENING" : "IDLE"}</span>
+            {listening && language === "auto" && detectedLang && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(6,182,212,0.15)", color: "var(--cyan)", border: "1px solid rgba(6,182,212,0.3)" }}>
+                🌐 {AMBIENT_LANGUAGES.find(l => l.code === detectedLang)?.label ?? detectedLang}
+              </span>
+            )}
           </span>
         </div>
         <div className="mb-2 flex flex-wrap items-center gap-4">
@@ -369,12 +508,21 @@ export default function AmbientSoap({ encounterId, doctorName }: AmbientSoapProp
           rows={7}
           placeholder="Type, paste, or click “Start listening” to dictate the consultation live…"
           value={transcript}
-          onChange={(e) => setTranscript(e.target.value)}
+          onChange={(e) => {
+            setTranscript(e.target.value);
+            // Keep committed ref in sync so Web Speech restarts don't overwrite manual edits
+            committedTextRef.current = e.target.value;
+            interimTextRef.current = "";
+          }}
         />
         {listening && (
           <div className="mt-1 text-[12.5px] italic" style={{ color: "var(--dim)" }}>
             {useLocalWhisper ? (
               transcribing ? "Transcribing the last few seconds…" : "Listening offline — speak naturally, text appears every few seconds."
+            ) : language === "auto" ? (
+              detectedLang
+                ? `Auto-detected: ${AMBIENT_LANGUAGES.find(l => l.code === detectedLang)?.label ?? detectedLang} — recognition switched for higher accuracy.`
+                : "Auto-detect active — speak naturally, language will be detected from your speech."
             ) : (
               "Listening real-time — speak naturally, words appear immediately."
             )}
@@ -405,7 +553,7 @@ export default function AmbientSoap({ encounterId, doctorName }: AmbientSoapProp
         {!draft ? <Empty>A SOAP note draft will appear here — you approve before it's committed.</Empty> : (
           <>
             <div className="mb-2 flex items-center justify-between">
-              <h4 className="font-bold text-slate-100" style={{ color: "#123a7a" }}>SOAP draft</h4>
+              <h4 className="font-bold text-slate-100">SOAP draft</h4>
               <AgentBadge label="Draft — needs approval" />
             </div>
             {(draft.result.red_flags?.length > 0 || draft.result.abnormal_vitals?.length > 0) && (

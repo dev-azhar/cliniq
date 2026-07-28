@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, CreditCard, UserRound } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
-import { loadRazorpayScript, type RazorpaySuccess } from "../../lib/razorpay";
+import TestPaymentModal, { type TestPaymentResult } from "../../components/TestPaymentModal";
 import { getPortalPatient } from "../../lib/patientAuth";
 import { Field, SectionTitle } from "../../components/ui";
 
@@ -19,17 +19,6 @@ type Slot = {
 };
 
 
-
-type RazorpayCheckout = {
-  open: () => void;
-  on: (event: "payment.failed", callback: (response: any) => void) => void;
-};
-
-declare global {
-  interface Window {
-    Razorpay?: new (options: Record<string, any>) => RazorpayCheckout;
-  }
-}
 
 type Step = "reason" | "date" | "slots" | "payment" | "details";
 
@@ -69,6 +58,8 @@ export default function AppointmentBooking() {
   const [checkoutEmail, setCheckoutEmail] = useState(session.email || "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [pendingOrder, setPendingOrder] = useState<any>(null);
 
   const doctors = useMemo(() => {
     const grouped = new Map<string, { doctor: Slot; slots: Slot[] }>();
@@ -109,12 +100,6 @@ export default function AppointmentBooking() {
       if (!Number.isFinite(amount) || amount < 100) {
         throw new Error("A valid consultation fee is not configured for this doctor.");
       }
-      let Razorpay = (window as any).Razorpay;
-      if (!Razorpay) {
-        const loaded = await loadRazorpayScript();
-        if (loaded) Razorpay = (window as any).Razorpay;
-      }
-
       const order = await api.createRazorpayOrder({
         patient_id: session.patient_id,
         doctor_id: selectedSlot.doctor_id,
@@ -126,62 +111,23 @@ export default function AppointmentBooking() {
         channel: "PORTAL",
         checkout_email: checkoutEmail.trim(),
       });
-      let payment: RazorpaySuccess;
-      if (order.key_id === "mock_sandbox_key" || !Razorpay) {
-        payment = {
-          razorpay_payment_id: `pay_mock_${Math.random().toString(36).substring(2, 11)}`,
-          razorpay_order_id: order.order_id,
-          razorpay_signature: "mock_signature_sandbox",
-        };
-      } else {
-        payment = await new Promise<RazorpaySuccess>((resolve, reject) => {
-          let settled = false;
-          const checkout = new Razorpay({
-            // Returned by the same server that created the order, preventing key/order mismatch.
-            key: order.key_id,
-            amount: order.amount,
-            currency: order.currency,
-            name: "Qconnect",
-            description: `${selectedSlot.specialty} consultation with ${selectedSlot.doctor_name}`,
-            order_id: order.order_id,
-            prefill: order.prefill,
-            readonly: {
-              name: true,
-              email: Boolean(order.prefill?.email),
-              contact: Boolean(order.prefill?.contact),
-            },
-            retry: { enabled: true },
-            theme: { color: "#2564cf" },
-            modal: {
-              confirm_close: true,
-              ondismiss: () => {
-                if (!settled) reject(new Error("Payment was cancelled. Your appointment has not been booked."));
-              },
-            },
-            handler: (response: RazorpaySuccess) => {
-              settled = true;
-              resolve(response);
-            },
-          });
-          checkout.on("payment.failed", (response: any) => {
-            settled = true;
-            const failure = response?.error;
-            const context = [failure?.code, failure?.reason, failure?.step].filter(Boolean).join(" · ");
-            reject(new Error(
-              `${failure?.description || "Payment failed. Please try again."}${context ? ` (${context})` : ""}`
-            ));
-          });
-          checkout.open();
-        });
-      }
-
-      const result = await api.verifyRazorpayPayment(payment);
-      setAppointment(result.appointment);
-      setShowPaymentDone(true);
+      setPendingOrder(order);
+      setShowPayModal(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : errorText(e));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handlePaymentSuccess(payment: TestPaymentResult) {
+    try {
+      const result = await api.verifyRazorpayPayment(payment);
+      setAppointment(result.appointment);
+      setShowPayModal(false);
+      setShowPaymentDone(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : errorText(e));
     }
   }
 
@@ -270,6 +216,15 @@ export default function AppointmentBooking() {
     </section>
 
     {showPaymentDone && <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 p-4" role="dialog" aria-modal="true"><div className="card w-full max-w-sm text-center"><CheckCircle2 className="mx-auto mb-3" size={44} color="var(--mint)" /><h3 className="text-lg font-extrabold">Payment done</h3><p className="mt-2 text-sm" style={{ color: "var(--muted)" }}>Your appointment has been booked successfully.</p><button className="btn g mt-4" onClick={() => { setShowPaymentDone(false); setStep("details"); }}>View appointment</button></div></div>}
+    <TestPaymentModal
+      open={showPayModal}
+      orderId={pendingOrder?.order_id ?? "appt_order"}
+      amountPaise={pendingOrder ? Math.round(Number(selectedSlot?.opd_fee ?? 500) * 100) : 50000}
+      title="Consultation Payment"
+      description={selectedSlot ? `${selectedSlot.specialty} — ${selectedSlot.doctor_name}` : "Appointment booking"}
+      onSuccess={handlePaymentSuccess}
+      onCancel={() => setShowPayModal(false)}
+    />
   </div>;
 }
 

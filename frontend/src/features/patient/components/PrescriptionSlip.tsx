@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Stethoscope, CheckCircle2, Clock, CreditCard, PackageCheck, AlertCircle } from "lucide-react";
 import { Card, Tag } from "../../../components/ui";
 import { api } from "../../../lib/api";
-import { loadRazorpayScript, type RazorpaySuccess } from "../../../lib/razorpay";
+import TestPaymentModal, { type TestPaymentResult } from "../../../components/TestPaymentModal";
 
 interface PrescriptionSlipProps {
   encounterId: string;
@@ -26,7 +26,6 @@ export default function PrescriptionSlip({
   const qc = useQueryClient();
   const [showPayModal, setShowPayModal] = useState(false);
   const [paymentDone, setPaymentDone] = useState(false);
-  const [paying, setPaying] = useState(false);
 
   if (!prescription || !prescription.items || prescription.items.length === 0) {
     return (
@@ -51,67 +50,12 @@ export default function PrescriptionSlip({
 
 
 
-  const handlePay = async () => {
-    setPaying(true);
+  const handlePaymentSuccess = async (payment: TestPaymentResult) => {
     try {
-      const order = await api.createRazorpayPrescriptionOrder({
-        patient_id: patientId,
-        amount: total,
-        rx_id: prescription.rx_id,
-      });
-
-      let payment: RazorpaySuccess;
-      let Razorpay = (window as any).Razorpay;
-      if (!Razorpay) {
-        const loaded = await loadRazorpayScript();
-        if (loaded) Razorpay = (window as any).Razorpay;
-      }
-
-      if (order.key_id === "mock_sandbox_key" || !Razorpay) {
-        payment = {
-          razorpay_payment_id: `pay_mock_${Math.random().toString(36).substring(2, 11)}`,
-          razorpay_order_id: order.order_id,
-          razorpay_signature: "mock_signature_sandbox",
-        };
-      } else {
-        payment = await new Promise<RazorpaySuccess>((resolve, reject) => {
-          let settled = false;
-          const checkout = new Razorpay({
-            key: order.key_id,
-            amount: order.amount,
-            currency: order.currency,
-            name: "Qconnect",
-            description: `Medication Checkout (Rx: ${prescription.rx_id.slice(0, 8)})`,
-            order_id: order.order_id,
-            prefill: order.prefill,
-            readonly: {
-              name: true,
-              email: Boolean(order.prefill?.email),
-              contact: Boolean(order.prefill?.contact),
-            },
-            retry: { enabled: true },
-            theme: { color: "#2564cf" },
-            modal: {
-              confirm_close: true,
-              ondismiss: () => {
-                if (!settled) reject(new Error("Payment was cancelled. Order not prepaid."));
-              },
-            },
-            handler: (response: RazorpaySuccess) => {
-              settled = true;
-              resolve(response);
-            },
-          });
-          checkout.on("payment.failed", (response: any) => {
-            settled = true;
-            reject(new Error(response?.error?.description || "Payment failed. Please try again."));
-          });
-          checkout.open();
-        });
-      }
-
       await api.verifyRazorpayPrescriptionPayment({
-        ...payment,
+        razorpay_payment_id: payment.razorpay_payment_id,
+        razorpay_order_id: payment.razorpay_order_id,
+        razorpay_signature: payment.razorpay_signature,
         rx_id: prescription.rx_id,
       });
 
@@ -127,11 +71,8 @@ export default function PrescriptionSlip({
         setPaymentDone(false);
         setShowPayModal(false);
       }, 1500);
-
     } catch (err: any) {
-      alert(err.message || "Failed to make payment");
-    } finally {
-      setPaying(false);
+      alert(err.message || "Failed to verify payment");
     }
   };
 
@@ -310,104 +251,15 @@ export default function PrescriptionSlip({
       )}
 
       {/* Online Payment Modal */}
-      {showPayModal && createPortal(
-        <div className="modal-overlay fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <Card 
-            className="w-full max-w-md space-y-4 relative overflow-hidden animate-in zoom-in-95 duration-200 text-xs"
-            style={{ 
-              background: "rgba(255,255,255,0.98)",
-              border: "1px solid var(--line2)",
-              boxShadow: "0 24px 60px -18px rgba(20, 33, 61, 0.38)"
-            }}
-          >
-            <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
-              <h3 className="flex items-center gap-2 text-sm font-extrabold text-[var(--ink)]">
-                💳 Online Medication Payment
-              </h3>
-              <button 
-                onClick={() => setShowPayModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--line)] text-sm font-semibold text-[var(--muted)] transition hover:bg-[rgba(37,100,207,0.07)] hover:text-[var(--ink)]"
-                disabled={paying}
-              >
-                ✕
-              </button>
-            </div>
-
-            {paymentDone ? (
-              <div className="py-8 text-center space-y-2 animate-in zoom-in-95">
-                <CheckCircle2 size={40} className="mx-auto text-emerald-600" />
-                <h4 className="text-sm font-bold text-[var(--ink)]">Payment Successful!</h4>
-                <p className="text-[var(--muted)]">Generating pickup token and counter routing info...</p>
-              </div>
-            ) : (
-              <>
-                {/* Cost Breakdown */}
-                <div className="space-y-2 rounded-xl border border-[var(--line2)] bg-[rgba(37,100,207,0.025)] p-3">
-                  <div className="border-b border-[var(--line)] pb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                    Order Summary
-                  </div>
-                  <div className="space-y-1.5 max-h-[150px] overflow-y-auto pr-1">
-                    {items.map((item: any, idx: number) => {
-                      const qty = item.quantity || 1;
-                      const price = item.unit_price || 10.0;
-                      return (
-                        <div key={idx} className="flex items-center justify-between gap-3 border-b border-[var(--line)] py-1.5 text-[var(--muted)] last:border-0">
-                          <div>
-                            <span className="font-bold text-[var(--ink)]">{item.drug_name}</span>
-                            <span className="text-[10px] text-[var(--dim)] ml-1.5">Qty: {qty}</span>
-                          </div>
-                          <span>₹{(qty * price).toFixed(2)}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="mt-2 space-y-1 border-t border-[var(--line2)] pt-2 text-[var(--muted)]">
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span>₹{subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>GST (18%)</span>
-                      <span>₹{gst.toFixed(2)}</span>
-                    </div>
-                    <div className="mt-1 flex justify-between border-t border-dashed border-[var(--line2)] pt-2 text-xs font-bold text-[var(--ink)]">
-                      <span>Total Amount</span>
-                      <span className="text-[var(--cyan)]">₹{total.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-amber-800">
-                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                  <div>
-                    <strong>Skip the Queue:</strong> Paying online pre-orders your packaging so the pharmacy will have it packaged and waiting at the counter.
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 border-t border-[var(--line)] pt-3">
-                  <button
-                    onClick={() => setShowPayModal(false)}
-                    disabled={paying}
-                    className="btn ghost font-bold text-xs px-4"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handlePay}
-                    disabled={paying}
-                    className="btn font-bold text-xs px-6 flex items-center gap-1.5"
-                    style={{ background: "linear-gradient(135deg, var(--mint), #059669)", color: "#011c10", border: "none" }}
-                  >
-                    {paying ? "Processing..." : `Pay ₹${total.toFixed(2)} & Pre-Order`}
-                  </button>
-                </div>
-              </>
-            )}
-          </Card>
-        </div>,
-        document.body
-      )}
+      <TestPaymentModal
+        open={showPayModal}
+        orderId={`rx_${prescription.rx_id}`}
+        amountPaise={Math.round(total * 100)}
+        title="Medication Payment"
+        description={`Prescription: ${prescription.rx_id.slice(0, 8)}...`}
+        onSuccess={handlePaymentSuccess}
+        onCancel={() => setShowPayModal(false)}
+      />
     </Card>
   );
 }

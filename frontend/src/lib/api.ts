@@ -107,9 +107,10 @@ export const api = {
   // clinical
   ambient: (encounter_id: string, transcript: string) =>
     post<any>(`/api/v1/encounters/${encounter_id}/ambient`, { encounter_id, transcript }),
-  ambientTranscribeAudio: (encounter_id: string, blob: Blob, filename: string) => {
+  ambientTranscribeAudio: (encounter_id: string, blob: Blob, filename: string, language?: string) => {
     const formData = new FormData();
     formData.append("audio", blob, filename);
+    if (language) formData.append("language", language);
     return fetch(`${BASE}/api/v1/encounters/${encounter_id}/ambient/transcribe-audio`, {
       method: "POST",
       body: formData,

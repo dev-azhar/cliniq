@@ -30,7 +30,7 @@ export default function Home() {
         <div className="relative px-8 py-10"
           style={{ background: "radial-gradient(760px 320px at 20% -30%, rgba(37,100,207,.22), transparent 62%), radial-gradient(700px 320px at 100% 120%, rgba(26,79,180,.20), transparent 60%)" }}>
           <div className="text-[12px] font-extrabold uppercase tracking-[0.34em]" style={{ color: "var(--cyan)" }}>
-            Next-Gen Clinical OS · Open Source
+            Next-Gen Clinical OS
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
             <button className="btn" onClick={() => nav("/patient/checkin")}>

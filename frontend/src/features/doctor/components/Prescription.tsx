@@ -135,7 +135,7 @@ export default function Prescription({
             <div>
               <h4 className="font-bold text-xs text-sky-400">AI Pharmacological & Generic Formula Guidance</h4>
               <p className="text-[11px] text-slate-400">
-                Analyzes patient issues and local PyTorch AI diagnostic reports to suggest generic formulations.
+                Comprehensive worldwide formulary — WHO, BNF, FDA, ESC, ADA, NICE & 40+ international guideline sources. Generic-only, evidence-based.
               </p>
             </div>
           </div>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Clock, Calendar, CheckCircle2, ChevronRight, AlertCircle, ArrowLeft, Ticket } from "lucide-react";
 import { api } from "../../../lib/api";
-import { loadRazorpayScript, type RazorpaySuccess } from "../../../lib/razorpay";
+import TestPaymentModal, { type TestPaymentResult } from "../../../components/TestPaymentModal";
 import { Card } from "../../../components/ui";
 
 interface LabOrdersAlertProps {
@@ -34,6 +34,8 @@ export default function LabOrdersAlert({
   const [selectedSlot, setSelectedSlot] = useState("");
   const [bookingBusy, setBookingBusy] = useState(false);
   const [labToken, setLabToken] = useState<string | null>(null);
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
   const pendingOrders = orders?.filter((o: any) => o.status === "CREATED") || [];
   const confirmedOrders = orders?.filter((o: any) => o.status === "CONFIRMED" || o.status === "PREPAID") || [];
@@ -131,70 +133,30 @@ export default function LabOrdersAlert({
         amount: totalCharges,
         lab_order_ids: pendingOrders.map((o: any) => o.lab_order_id),
       });
+      setPendingOrderId(order.order_id);
+      setShowPayModal(true);
+    } catch (err: any) {
+      alert(err.message || "Failed to initiate payment.");
+    } finally {
+      setBookingBusy(false);
+    }
+  };
 
-      let payment: RazorpaySuccess;
-      let Razorpay = (window as any).Razorpay;
-      if (!Razorpay) {
-        const loaded = await loadRazorpayScript();
-        if (loaded) Razorpay = (window as any).Razorpay;
-      }
-
-      if (order.key_id === "mock_sandbox_key" || !Razorpay) {
-        payment = {
-          razorpay_payment_id: `pay_mock_${Math.random().toString(36).substring(2, 11)}`,
-          razorpay_order_id: order.order_id,
-          razorpay_signature: "mock_signature_sandbox",
-        };
-      } else {
-        payment = await new Promise<RazorpaySuccess>((resolve, reject) => {
-          let settled = false;
-          const checkout = new Razorpay({
-            key: order.key_id,
-            amount: order.amount,
-            currency: order.currency,
-            name: "Qconnect",
-            description: `Lab Tests: ${pendingOrders.map((o: any) => o.test).join(", ")}`,
-            order_id: order.order_id,
-            prefill: order.prefill,
-            readonly: {
-              name: true,
-              email: Boolean(order.prefill?.email),
-              contact: Boolean(order.prefill?.contact),
-            },
-            retry: { enabled: true },
-            theme: { color: "#2564cf" },
-            modal: {
-              confirm_close: true,
-              ondismiss: () => {
-                if (!settled) reject(new Error("Payment was cancelled. Lab booking not confirmed."));
-              },
-            },
-            handler: (response: RazorpaySuccess) => {
-              settled = true;
-              resolve(response);
-            },
-          });
-          checkout.on("payment.failed", (response: any) => {
-            settled = true;
-            reject(new Error(response?.error?.description || "Payment failed. Please try again."));
-          });
-          checkout.open();
-        });
-      }
-
+  const handlePaymentSuccess = async (payment: TestPaymentResult) => {
+    try {
       await api.verifyRazorpayLabPayment({
-        ...payment,
+        razorpay_payment_id: payment.razorpay_payment_id,
+        razorpay_order_id: payment.razorpay_order_id,
+        razorpay_signature: payment.razorpay_signature,
         lab_order_ids: pendingOrders.map((o: any) => o.lab_order_id),
       });
-
+      setShowPayModal(false);
       setStep("success");
       await refetchLab();
       await refetchEnc();
       await refetchP360();
     } catch (err: any) {
       alert(err.message || "Failed to confirm booking.");
-    } finally {
-      setBookingBusy(false);
     }
   };
 
@@ -223,6 +185,7 @@ export default function LabOrdersAlert({
   const isTodayVisit = !selectedDate || selectedDate === todayIso();
 
   return (
+    <>
     <Card 
       className="lab-orders-alert border border-dashed relative overflow-hidden animate-in fade-in duration-200"
       style={{ 
@@ -422,5 +385,15 @@ export default function LabOrdersAlert({
         </div>
       )}
     </Card>
+    <TestPaymentModal
+      open={showPayModal}
+      orderId={pendingOrderId ?? "lab_order"}
+      amountPaise={Math.round(totalCharges * 100)}
+      title="Lab Test Payment"
+      description={`${pendingOrders.length} test(s): ${pendingOrders.map((o: any) => o.test_name || o.test).join(", ").slice(0, 60)}`}
+      onSuccess={handlePaymentSuccess}
+      onCancel={() => setShowPayModal(false)}
+    />
+    </>
   );
 }
