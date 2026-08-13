@@ -1,9 +1,10 @@
 /**
  * Session layer for the Smart Hospital OS (`/os`) console.
  *
- * A successful `/api/v1/os/login` returns a staff profile which is persisted to
- * localStorage. The dashboard reads it to personalise the top bar and to guard
- * the route; logout clears it.
+ * `/api/v1/os/login` returns a signed, expiring token plus the staff profile.
+ * The token is sent as a bearer credential on OS API calls and is validated
+ * server-side (`/os/me`); the profile personalises the UI. Expiry is enforced
+ * both client-side (fast redirect) and server-side (authoritative).
  */
 
 export interface OsSession {
@@ -13,7 +14,9 @@ export interface OsSession {
   roleLabel: string;
   department: string;
   specialty: string | null;
-  authenticatedAt: string;
+  token: string;
+  /** Epoch seconds when the token expires. */
+  expiresAt: number;
 }
 
 const STORAGE_KEY = "cliniq.os.session";
@@ -21,10 +24,26 @@ const STORAGE_KEY = "cliniq.os.session";
 export function getOsSession(): OsSession | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as OsSession) : null;
+    if (!raw) return null;
+    const session = JSON.parse(raw) as OsSession;
+    // Client-side expiry check (server enforces the real one).
+    if (!session.token || (session.expiresAt && session.expiresAt * 1000 <= Date.now())) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return session;
   } catch {
     return null;
   }
+}
+
+export function getOsToken(): string | null {
+  return getOsSession()?.token ?? null;
+}
+
+export function osAuthHeader(): Record<string, string> {
+  const token = getOsToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export function setOsSession(session: OsSession): void {
@@ -64,4 +83,13 @@ export async function osLoginRequest(input: {
     throw new Error(detail);
   }
   return (await res.json()) as OsSession;
+}
+
+/** Authoritative server-side validation of the stored token. Throws on 401. */
+export async function fetchOsMe(): Promise<{ name: string; role: string; roleLabel: string; department: string }> {
+  const res = await fetch("/api/v1/os/me", {
+    headers: { Accept: "application/json", ...osAuthHeader() },
+  });
+  if (!res.ok) throw new Error(`os/me → ${res.status}`);
+  return await res.json();
 }

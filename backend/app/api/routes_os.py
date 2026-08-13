@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.core.database import get_db
+from app.core.os_auth import require_os_staff, sign_os_token
 
 router = APIRouter(prefix="/api/v1/os", tags=["os-dashboard"])
 
@@ -70,15 +71,36 @@ def os_login(body: OsLoginRequest, db: Session = Depends(get_db)) -> dict:
         specialty = None
         staff_id = None
 
-    return {
+    profile = {
         "staffId": staff_id,
         "name": name,
         "role": role,
         "roleLabel": _ROLE_LABELS.get(role, body.role.strip().title() or "Staff"),
         "department": department or specialty or "General",
         "specialty": specialty,
+    }
+    token, expires_at = sign_os_token({"sub": staff_id or name, **profile})
+    return {
+        **profile,
+        "token": token,
+        "expiresAt": expires_at,
         "authenticatedAt": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@router.get("/me")
+def me(claims: dict = Depends(require_os_staff)) -> dict:
+    """Validate the caller's token and echo back their session profile."""
+    return {
+        "staffId": claims.get("staffId"),
+        "name": claims.get("name"),
+        "role": claims.get("role"),
+        "roleLabel": claims.get("roleLabel"),
+        "department": claims.get("department"),
+        "specialty": claims.get("specialty"),
+        "expiresAt": claims.get("exp"),
+    }
+
 
 
 # Encounter lifecycle buckets used across the dashboard aggregations.
@@ -96,7 +118,7 @@ def _fmt_inr(amount: float) -> str:
 
 
 @router.get("/overview")
-def overview(db: Session = Depends(get_db)) -> dict:
+def overview(db: Session = Depends(get_db), _claims: dict = Depends(require_os_staff)) -> dict:
     """Top-bar status pills + Command Center KPI tiles, computed from the DB."""
     today = date.today()
 

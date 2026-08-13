@@ -6,6 +6,7 @@
  * rendering (with placeholders) even while loading or if the backend is offline.
  */
 import { useQuery } from "@tanstack/react-query";
+import { osAuthHeader } from "./osSession";
 
 export interface OsOverview {
   status: {
@@ -29,7 +30,7 @@ export interface OsOverview {
 }
 
 async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(path, { headers: { Accept: "application/json" } });
+  const res = await fetch(path, { headers: { Accept: "application/json", ...osAuthHeader() } });
   if (!res.ok) throw new Error(`${path} → ${res.status}`);
   return res.json() as Promise<T>;
 }

@@ -1,8 +1,8 @@
-import { useState, Fragment } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import {
   Search, Plus, Sparkles, Bell, ChevronDown, LayoutGrid, Users,
-  ClipboardList, UserCog, FlaskConical, ScanLine, Pill, Scissors, HeartPulse,
+  ClipboardList, UserCog, FlaskConical, ScanLine, Pill as PillIcon, Scissors, HeartPulse,
   Ambulance, Receipt, Boxes, FileText, Map, Building2, Package, CheckSquare,
   MessageSquare, TriangleAlert, BedDouble, LogOut, IndianRupee, MoreHorizontal,
   Share2, ExternalLink, Send, Maximize2, Activity, ShieldAlert,
@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { useOsOverview } from "./osApi";
-import { getOsSession, clearOsSession, osInitials } from "./osSession";
+import { getOsSession, clearOsSession, osInitials, fetchOsMe } from "./osSession";
 
 /* ------------------------------------------------------------------ data --- */
 
@@ -34,7 +34,7 @@ const NAV_WORKSPACE = [
   { label: "Care Team", icon: UserCog },
   { label: "Labs", icon: FlaskConical },
   { label: "Radiology", icon: ScanLine },
-  { label: "Pharmacy", icon: Pill },
+  { label: "Pharmacy", icon: PillIcon },
   { label: "Surgery / OT", icon: Scissors },
   { label: "ICU", icon: HeartPulse },
   { label: "Emergency", icon: Ambulance },
@@ -57,7 +57,7 @@ const NAV_SYSTEM = [
 const KPIS = [
   { value: "3", label: "Critical Labs", action: "View All", icon: TriangleAlert, color: "#D13438" },
   { value: "18", label: "Beds Available", action: "View Occupancy", icon: BedDouble, color: "#107C10" },
-  { value: "42", label: "Prescriptions Pending", action: "Review", icon: Pill, color: "#CA5010" },
+  { value: "42", label: "Prescriptions Pending", action: "Review", icon: PillIcon, color: "#CA5010" },
   { value: "24", label: "ER Patients", action: "View Queue", icon: Ambulance, color: "#0078d4" },
   { value: "12", label: "Discharges Today", action: "View List", icon: LogOut, color: "#038387" },
   { value: "\u20B9 8.6M", label: "Today's Revenue", action: "View Analytics", icon: IndianRupee, color: "#8764B8" },
@@ -106,7 +106,7 @@ const ACTIVITY = [
   { who: "Dr. Sara Malik", what: "added a note for Ahmed Khan", time: "2 min ago", icon: FileText },
   { who: "Lab result", what: "(Troponin I) is Abnormal", time: "5 min ago", icon: FlaskConical },
   { who: "Nurse Aysha", what: "updated vitals for Bed ICU-07", time: "10 min ago", icon: Activity },
-  { who: "Prescription", what: "issued by Dr. Ahmed Ali", time: "15 min ago", icon: Pill },
+  { who: "Prescription", what: "issued by Dr. Ahmed Ali", time: "15 min ago", icon: PillIcon },
   { who: "Payment received", what: "from Patient Zara Ali", time: "20 min ago", icon: IndianRupee },
 ];
 
@@ -312,7 +312,7 @@ const RECENT_ENC = [
   { date: "10 May 2024", time: "11:20 AM", kind: "Lab Result", tag: "", detail: "Troponin I 1.52 ng/mL (High)", icon: FlaskConical, tone: "#D13438" },
   { date: "10 May 2024", time: "", kind: "Coronary Angiography", tag: "", detail: "90% blockage in LAD", icon: Activity, tone: "#8764B8" },
   { date: "11 May 2024", time: "08:10 AM", kind: "ICU Transfer", tag: "", detail: "Post procedure Monitoring", icon: ArrowUpRight, tone: "#0078d4" },
-  { date: "12 May 2024", time: "", kind: "Medication Updated", tag: "", detail: "Dual antiplatelet therapy", icon: Pill, tone: "#CA5010" },
+  { date: "12 May 2024", time: "", kind: "Medication Updated", tag: "", detail: "Dual antiplatelet therapy", icon: PillIcon, tone: "#CA5010" },
   { date: "13 May 2024", time: "10:30 AM", kind: "Discharge Plan", tag: "", detail: "Planned discharge on 15 May 2024", icon: LogOut, tone: "#16a34a" },
 ];
 const ADMISSION_BAR = [
@@ -863,7 +863,7 @@ function Spark({ color = "#0078d4" }: { color?: string }) {
   );
 }
 
-function NavRow({ label, icon: Icon, active, badge, onClick }: { label: string; icon: ComponentType<{ size?: number | string }>; active?: boolean; badge?: number; onClick?: () => void }) {
+function NavRow({ label, icon: Icon, active, badge, onClick }: { label: string; icon: ComponentType<{ size?: number | string; color?: string }>; active?: boolean; badge?: number; onClick?: () => void }) {
   return (
     <button
       type="button"
@@ -3332,6 +3332,19 @@ export default function CommandCenterOS() {
     clearOsSession();
     navigate("/os/login", { replace: true });
   };
+
+  // Authoritative server-side token validation + cross-tab logout sync.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "cliniq.os.session" && !e.newValue) navigate("/os/login", { replace: true });
+    };
+    window.addEventListener("storage", onStorage);
+    fetchOsMe().catch(() => {
+      clearOsSession();
+      navigate("/os/login", { replace: true });
+    });
+    return () => window.removeEventListener("storage", onStorage);
+  }, [navigate]);
 
   // Route guard: no session → back to the login screen.
   if (!session) return <Navigate to="/os/login" replace />;
