@@ -45,11 +45,35 @@ def get_db() -> Iterator[Session]:
         db.close()
 
 
+def _reconcile_missing_columns() -> None:
+    """Add any model column absent from an existing table (no-migration drift fix).
+
+    New nullable columns are added best-effort so older demo databases stay
+    compatible with the current models without a migration framework.
+    """
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue
+        present = {col["name"] for col in inspector.get_columns(table.name)}
+        for column in table.columns:
+            if column.name in present or column.primary_key:
+                continue
+            try:
+                col_type = column.type.compile(dialect=engine.dialect)
+            except Exception:
+                col_type = "TEXT"
+            with engine.begin() as connection:
+                connection.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}'))
+
+
 def init_db() -> None:
     """Create all tables. Import models so they register on the metadata."""
     from app import models  # noqa: F401  (side-effect: register mappers)
 
     Base.metadata.create_all(bind=engine)
+    _reconcile_missing_columns()
 
     # This project intentionally has no migration framework. Keep existing demo
     # databases compatible when a new nullable encounter link is introduced.

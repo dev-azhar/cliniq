@@ -15,7 +15,7 @@ import {
   TrendingUp, Truck, Star, CreditCard, Wallet, Landmark,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
-import { useOsOverview } from "./osApi";
+import { useOsOverview, useOsBilling } from "./osApi";
 import { getOsSession, clearOsSession, osInitials, fetchOsMe } from "./osSession";
 
 /* ------------------------------------------------------------------ data --- */
@@ -3606,22 +3606,27 @@ function SurgeryView() {
 
 function BillingView() {
   const [wlTab, setWlTab] = useState("All");
+  const { data: bill } = useOsBilling();
+  const k = bill?.kpis;
   const kpis = [
-    { label: "Total Invoices", value: "1,245", icon: FileText, color: "#0078d4" },
-    { label: "Claims Submitted", value: "672", icon: FileCheck, color: "#8764B8" },
-    { label: "Claims Paid", value: "512", icon: CheckSquare, color: "#107C10" },
-    { label: "Denials", value: "68", icon: XCircle, color: "#D13438" },
-    { label: "Payment Posts", value: "328", icon: Wallet, color: "#038387" },
-    { label: "Refunds", value: "22", icon: RotateCcw, color: "#CA5010" },
+    { label: "Total Invoices", value: k ? k.totalInvoices.toLocaleString() : "1,245", icon: FileText, color: "#0078d4" },
+    { label: "Claims Submitted", value: k ? k.claimsSubmitted.toLocaleString() : "672", icon: FileCheck, color: "#8764B8" },
+    { label: "Claims Paid", value: k ? k.claimsPaid.toLocaleString() : "512", icon: CheckSquare, color: "#107C10" },
+    { label: "Denials", value: k ? k.denials.toLocaleString() : "68", icon: XCircle, color: "#D13438" },
+    { label: "Payment Posts", value: k ? k.paymentPosts.toLocaleString() : "328", icon: Wallet, color: "#038387" },
+    { label: "Refunds", value: k ? k.refunds.toLocaleString() : "22", icon: RotateCcw, color: "#CA5010" },
   ];
   const wlTabs = [["All", 1245], ["Unpaid", 678], ["Partially Paid", 156], ["Overdue", 411], ["Draft", 32]] as const;
-  const invoices = [
-    { inv: "INV-25050145", name: "Ahmed Khan", mrn: "CLN-00011223", date: "May 20, 2024", visit: "Inpatient", gross: "₹ 85,420", bal: "₹ 45,650", status: "Overdue", tone: "#D13438", due: "May 27, 2024" },
-    { inv: "INV-25050144", name: "Sara Ali", mrn: "CLN-00067890", date: "May 20, 2024", visit: "Outpatient", gross: "₹ 15,230", bal: "₹ 7,230", status: "Unpaid", tone: "#CA5010", due: "Jun 04, 2024" },
-    { inv: "INV-25050143", name: "Bilal Ahmed", mrn: "CLN-00011224", date: "May 19, 2024", visit: "Inpatient", gross: "₹ 1,24,530", bal: "₹ 1,24,530", status: "Unpaid", tone: "#CA5010", due: "Jun 02, 2024" },
-    { inv: "INV-25050142", name: "Maryam Khan", mrn: "CLN-00033445", date: "May 19, 2024", visit: "Emergency", gross: "₹ 22,840", bal: "₹ 11,420", status: "Partially Paid", tone: "#0078d4", due: "Jun 03, 2024" },
-    { inv: "INV-25050141", name: "Usman Tariq", mrn: "CLN-00055678", date: "May 18, 2024", visit: "Outpatient", gross: "₹ 9,860", bal: "₹ 0", status: "Paid", tone: "#16a34a", due: "—" },
-  ];
+  const invTone = (s: string) => (s === "Paid" ? "#16a34a" : s === "Partially Paid" ? "#0078d4" : s === "Overdue" ? "#D13438" : "#CA5010");
+  const invoices = bill?.invoices?.length
+    ? bill.invoices.map((r) => ({ invoice: r.invoice, name: r.name, mrn: r.mrn, date: r.date, visit: r.visit, gross: r.gross, balance: r.balance, status: r.status, tone: invTone(r.status), due: "—" }))
+    : [
+      { invoice: "INV-25050145", name: "Ahmed Khan", mrn: "CLN-00011223", date: "May 20, 2024", visit: "Inpatient", gross: "₹ 85,420", balance: "₹ 45,650", status: "Overdue", tone: "#D13438", due: "May 27, 2024" },
+      { invoice: "INV-25050144", name: "Sara Ali", mrn: "CLN-00067890", date: "May 20, 2024", visit: "Outpatient", gross: "₹ 15,230", balance: "₹ 7,230", status: "Unpaid", tone: "#CA5010", due: "Jun 04, 2024" },
+      { invoice: "INV-25050143", name: "Bilal Ahmed", mrn: "CLN-00011224", date: "May 19, 2024", visit: "Inpatient", gross: "₹ 1,24,530", balance: "₹ 1,24,530", status: "Unpaid", tone: "#CA5010", due: "Jun 02, 2024" },
+      { invoice: "INV-25050142", name: "Maryam Khan", mrn: "CLN-00033445", date: "May 19, 2024", visit: "Emergency", gross: "₹ 22,840", balance: "₹ 11,420", status: "Partially Paid", tone: "#0078d4", due: "Jun 03, 2024" },
+      { invoice: "INV-25050141", name: "Usman Tariq", mrn: "CLN-00055678", date: "May 18, 2024", visit: "Outpatient", gross: "₹ 9,860", balance: "₹ 0", status: "Paid", tone: "#16a34a", due: "—" },
+    ];
   const denials = [
     { reason: "Medical Necessity", claims: 22, pct: "32.4%", amount: "₹ 52.41 L", tone: "#D13438" },
     { reason: "Authorization Missing", claims: 15, pct: "22.1%", amount: "₹ 31.22 L", tone: "#CA5010" },
@@ -3636,22 +3641,36 @@ function BillingView() {
     { payer: "Bajaj Allianz", claims: 84, paid: "₹ 1.28 Cr", denial: "4.6%", days: 16 },
     { payer: "Aditya Birla Health", claims: 76, paid: "₹ 1.08 Cr", denial: "6.3%", days: 19 },
   ];
-  const payments = [
-    { rcpt: "RCPT-2505210", name: "John Smith", payer: "Star Health", amount: "₹ 85,420", on: "May 21, 2024" },
-    { rcpt: "RCPT-2505209", name: "Sara Ali", payer: "Care Health", amount: "₹ 45,230", on: "May 21, 2024" },
-    { rcpt: "RCPT-2505208", name: "Ahmed Khan", payer: "Self Pay", amount: "₹ 22,000", on: "May 21, 2024" },
-    { rcpt: "RCPT-2505207", name: "Maryam Khan", payer: "MedSave TPA", amount: "₹ 16,840", on: "May 20, 2024" },
-    { rcpt: "RCPT-2505206", name: "Bilal Ahmed", payer: "Bajaj Allianz", amount: "₹ 12,450", on: "May 20, 2024" },
-  ];
+  const payments = bill?.recentPayments?.length
+    ? bill.recentPayments.map((p) => ({ receipt: p.receipt, name: p.name, method: p.method, amount: p.amount, on: p.on }))
+    : [
+      { receipt: "RCPT-2505210", name: "John Smith", method: "Card", amount: "₹ 85,420", on: "May 21, 2024" },
+      { receipt: "RCPT-2505209", name: "Sara Ali", method: "UPI", amount: "₹ 45,230", on: "May 21, 2024" },
+      { receipt: "RCPT-2505208", name: "Ahmed Khan", method: "Cash", amount: "₹ 22,000", on: "May 21, 2024" },
+      { receipt: "RCPT-2505207", name: "Maryam Khan", method: "Card", amount: "₹ 16,840", on: "May 20, 2024" },
+      { receipt: "RCPT-2505206", name: "Bilal Ahmed", method: "Wallet", amount: "₹ 12,450", on: "May 20, 2024" },
+    ];
+  const pctOf = (n: number, t: number) => (t ? (n / t) * 100 : 0);
+  const arPalette = ["#0078d4", "#16a34a", "#CA8A04", "#CA5010", "#D13438"];
+  const ar = bill?.arAging && bill.arAging.segments.some((s) => s.pct > 0)
+    ? { center: bill.arAging.total, segments: bill.arAging.segments.map((s, i) => ({ pct: s.pct, color: arPalette[i % arPalette.length] })), legend: bill.arAging.segments.map((s, i) => ({ label: s.label, value: `${s.value} · ${s.pct}%`, color: arPalette[i % arPalette.length] })) }
+    : { center: "₹ 8.92 Cr", segments: [{ pct: 27.8, color: "#0078d4" }, { pct: 24.2, color: "#16a34a" }, { pct: 19.5, color: "#CA8A04" }, { pct: 13.7, color: "#CA5010" }, { pct: 14.8, color: "#D13438" }], legend: [{ label: "0 – 30 Days", value: "₹ 2.48 Cr · 27.8%", color: "#0078d4" }, { label: "31 – 60 Days", value: "₹ 2.16 Cr · 24.2%", color: "#16a34a" }, { label: "61 – 90 Days", value: "₹ 1.74 Cr · 19.5%", color: "#CA8A04" }, { label: "91 – 120 Days", value: "₹ 1.22 Cr · 13.7%", color: "#CA5010" }, { label: "120+ Days", value: "₹ 1.32 Cr · 14.8%", color: "#D13438" }] };
+  const cs = bill?.claimsSummary;
+  const claims = cs && cs.total > 0
+    ? { center: String(cs.total), segments: [{ pct: pctOf(cs.approved, cs.total), color: "#16a34a" }, { pct: pctOf(cs.denied, cs.total), color: "#D13438" }, { pct: pctOf(cs.pending, cs.total), color: "#CA8A04" }], legend: [{ label: "Approved", value: `${cs.approved} (${pctOf(cs.approved, cs.total).toFixed(1)}%)`, color: "#16a34a" }, { label: "Denied", value: `${cs.denied} (${pctOf(cs.denied, cs.total).toFixed(1)}%)`, color: "#D13438" }, { label: "Pending", value: `${cs.pending} (${pctOf(cs.pending, cs.total).toFixed(1)}%)`, color: "#CA8A04" }] }
+    : { center: "672", segments: [{ pct: 76.2, color: "#16a34a" }, { pct: 10.1, color: "#D13438" }, { pct: 13.7, color: "#CA8A04" }], legend: [{ label: "Approved", value: "512 (76.2%)", color: "#16a34a" }, { label: "Denied", value: "68 (10.1%)", color: "#D13438" }, { label: "Pending", value: "92 (13.7%)", color: "#CA8A04" }] };
+  const pmPalette = ["#0078d4", "#8764B8", "#16a34a", "#CA5010", "#038387"];
+  const pm = bill?.paymentModes?.modes?.length
+    ? { center: bill.paymentModes.total, segments: bill.paymentModes.modes.map((m, i) => ({ pct: m.pct, color: pmPalette[i % pmPalette.length] })), legend: bill.paymentModes.modes.map((m, i) => ({ label: m.label, value: `${m.value} · ${m.pct}%`, color: pmPalette[i % pmPalette.length] })) }
+    : { center: "₹ 9.72 L", segments: [{ pct: 42.4, color: "#0078d4" }, { pct: 26.1, color: "#8764B8" }, { pct: 19.8, color: "#16a34a" }, { pct: 11.7, color: "#CA5010" }], legend: [{ label: "Net Banking", value: "₹ 4.12 L · 42.4%", color: "#0078d4" }, { label: "Card", value: "₹ 2.54 L · 26.1%", color: "#8764B8" }, { label: "UPI", value: "₹ 1.92 L · 19.8%", color: "#16a34a" }, { label: "Cash", value: "₹ 1.14 L · 11.7%", color: "#CA5010" }] };
+
   return (
     <div className="space-y-4">
       <ViewHead title="Billing Command Center" subtitle="Real-time overview of hospital financial operations" />
       <KpiRow items={kpis} />
 
       <div className="grid gap-3 md:grid-cols-2">
-        <DonutCard title="Accounts Receivable Aging" action="View Analytics" center="₹ 8.92 Cr" sub="Total AR"
-          segments={[{ pct: 27.8, color: "#0078d4" }, { pct: 24.2, color: "#16a34a" }, { pct: 19.5, color: "#CA8A04" }, { pct: 13.7, color: "#CA5010" }, { pct: 14.8, color: "#D13438" }]}
-          legend={[{ label: "0 – 30 Days", value: "₹ 2.48 Cr · 27.8%", color: "#0078d4" }, { label: "31 – 60 Days", value: "₹ 2.16 Cr · 24.2%", color: "#16a34a" }, { label: "61 – 90 Days", value: "₹ 1.74 Cr · 19.5%", color: "#CA8A04" }, { label: "91 – 120 Days", value: "₹ 1.22 Cr · 13.7%", color: "#CA5010" }, { label: "120+ Days", value: "₹ 1.32 Cr · 14.8%", color: "#D13438" }]} />
+        <DonutCard title="Accounts Receivable Aging" action="View Analytics" center={ar.center} sub="Total AR" segments={ar.segments} legend={ar.legend} />
         <DonutCard title="Payer Mix" action="View Analytics" center="₹ 18.64 L" sub="Total Charges"
           segments={[{ pct: 66.8, color: "#0078d4" }, { pct: 17.4, color: "#8764B8" }, { pct: 10, color: "#16a34a" }, { pct: 5.8, color: "#CA5010" }]}
           legend={[{ label: "Insurance", value: "₹ 12.45 L · 66.8%", color: "#0078d4" }, { label: "TPA", value: "₹ 3.24 L · 17.4%", color: "#8764B8" }, { label: "Corporate", value: "₹ 1.86 L · 10.0%", color: "#16a34a" }, { label: "Self Pay", value: "₹ 1.09 L · 5.8%", color: "#CA5010" }]} />
@@ -3682,14 +3701,14 @@ function BillingView() {
             </tr></thead>
             <tbody>
               {invoices.map((r) => (
-                <tr key={r.inv} className="border-t border-black/[0.05]">
-                  <td className="py-1.5 pr-3 font-semibold text-[#0078d4]">{r.inv}</td>
+                <tr key={r.invoice} className="border-t border-black/[0.05]">
+                  <td className="py-1.5 pr-3 font-semibold text-[#0078d4]">{r.invoice}</td>
                   <td className="py-1.5 pr-3 font-semibold text-slate-700">{r.name}</td>
                   <td className="py-1.5 pr-3 text-slate-500">{r.mrn}</td>
                   <td className="py-1.5 pr-3 text-slate-500">{r.date}</td>
                   <td className="py-1.5 pr-3 text-slate-600">{r.visit}</td>
                   <td className="py-1.5 pr-3 font-semibold text-slate-700" style={{ fontVariantNumeric: "tabular-nums" }}>{r.gross}</td>
-                  <td className="py-1.5 pr-3 font-semibold text-slate-700" style={{ fontVariantNumeric: "tabular-nums" }}>{r.bal}</td>
+                  <td className="py-1.5 pr-3 font-semibold text-slate-700" style={{ fontVariantNumeric: "tabular-nums" }}>{r.balance}</td>
                   <td className="py-1.5 pr-3"><Pill tone={r.tone}>{r.status}</Pill></td>
                   <td className="py-1.5 pr-3 text-slate-500">{r.due}</td>
                   <td className="py-1.5"><button type="button" className="grid h-6 w-6 place-items-center rounded border border-black/[0.08] text-slate-400"><MoreHorizontal size={14} /></button></td>
@@ -3702,9 +3721,7 @@ function BillingView() {
 
       {/* Claims summary · denials · collection trend */}
       <div className="grid gap-3 xl:grid-cols-3">
-        <DonutCard title="Claims Summary" action="View Report" center="672" sub="Total Claims"
-          segments={[{ pct: 76.2, color: "#16a34a" }, { pct: 10.1, color: "#D13438" }, { pct: 13.7, color: "#CA8A04" }]}
-          legend={[{ label: "Approved", value: "512 (76.2%)", color: "#16a34a" }, { label: "Denied", value: "68 (10.1%)", color: "#D13438" }, { label: "Pending", value: "92 (13.7%)", color: "#CA8A04" }]} />
+        <DonutCard title="Claims Summary" action="View Report" center={claims.center} sub="Total Claims" segments={claims.segments} legend={claims.legend} />
 
         <div className={`${card} p-3`}>
           <PanelHead title="Top Denial Reasons" action="View Denial Report" />
@@ -3758,18 +3775,16 @@ function BillingView() {
           <PanelHead title="Recent Payments" action="View All" />
           <div className="space-y-1.5">
             {payments.map((p) => (
-              <div key={p.rcpt} className="flex items-center gap-2 rounded-lg border border-black/[0.05] bg-white/60 px-2 py-1.5">
+              <div key={p.receipt} className="flex items-center gap-2 rounded-lg border border-black/[0.05] bg-white/60 px-2 py-1.5">
                 <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[rgba(16,124,16,.12)] text-[#107C10]"><IndianRupee size={13} /></span>
-                <div className="min-w-0 flex-1"><div className="truncate text-[11.5px] font-semibold text-slate-700">{p.name}</div><div className="truncate text-[9.5px] text-slate-400">{p.rcpt} · {p.payer}</div></div>
+                <div className="min-w-0 flex-1"><div className="truncate text-[11.5px] font-semibold text-slate-700">{p.name}</div><div className="truncate text-[9.5px] text-slate-400">{p.receipt} · {p.method}</div></div>
                 <div className="text-right"><div className="text-[12px] font-bold text-slate-700">{p.amount}</div><div className="text-[9px] text-slate-400">{p.on}</div></div>
               </div>
             ))}
           </div>
         </div>
 
-        <DonutCard title="Payment Mode Summary" action="View Report" center="₹ 9.72 L" sub="Collected"
-          segments={[{ pct: 42.4, color: "#0078d4" }, { pct: 26.1, color: "#8764B8" }, { pct: 19.8, color: "#16a34a" }, { pct: 11.7, color: "#CA5010" }]}
-          legend={[{ label: "Net Banking", value: "₹ 4.12 L · 42.4%", color: "#0078d4" }, { label: "Card", value: "₹ 2.54 L · 26.1%", color: "#8764B8" }, { label: "UPI", value: "₹ 1.92 L · 19.8%", color: "#16a34a" }, { label: "Cash", value: "₹ 1.14 L · 11.7%", color: "#CA5010" }]} />
+        <DonutCard title="Payment Mode Summary" action="View Report" center={pm.center} sub="Collected" segments={pm.segments} legend={pm.legend} />
       </div>
     </div>
   );

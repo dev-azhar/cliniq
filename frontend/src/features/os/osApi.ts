@@ -43,3 +43,25 @@ export function useOsOverview() {
     staleTime: 15_000,
   });
 }
+
+export interface OsBilling {
+  kpis: {
+    totalInvoices: number; claimsSubmitted: number; claimsPaid: number;
+    denials: number; paymentPosts: number; refunds: number;
+  };
+  arAging: { total: string; segments: { label: string; value: string; pct: number }[] };
+  claimsSummary: { total: number; approved: number; denied: number; pending: number };
+  paymentModes: { total: string; modes: { label: string; value: string; pct: number }[] };
+  invoices: { invoice: string; name: string; mrn: string; date: string; visit: string; gross: string; balance: string; status: string }[];
+  recentPayments: { receipt: string; name: string; method: string; amount: string; on: string }[];
+  generatedAt: string;
+}
+
+export function useOsBilling() {
+  return useQuery({
+    queryKey: ["os", "billing"],
+    queryFn: () => fetchJson<OsBilling>("/api/v1/os/billing"),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+}

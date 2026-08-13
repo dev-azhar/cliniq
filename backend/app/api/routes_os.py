@@ -117,6 +117,18 @@ def _fmt_inr(amount: float) -> str:
     return f"\u20b9 {amount:,.0f}"
 
 
+def _fmt_inr_indian(amount: float) -> str:
+    """Indian short currency: crore / lakh / thousand."""
+    if amount >= 10_000_000:
+        return f"\u20b9 {amount / 10_000_000:.2f} Cr"
+    if amount >= 100_000:
+        return f"\u20b9 {amount / 100_000:.2f} L"
+    if amount >= 1_000:
+        return f"\u20b9 {amount / 1_000:.1f} K"
+    return f"\u20b9 {amount:,.0f}"
+
+
+
 @router.get("/overview")
 def overview(db: Session = Depends(get_db), _claims: dict = Depends(require_os_staff)) -> dict:
     """Top-bar status pills + Command Center KPI tiles, computed from the DB."""
@@ -183,3 +195,127 @@ def overview(db: Session = Depends(get_db), _claims: dict = Depends(require_os_s
         "totalPatients": int(total_patients),
         "generatedAt": datetime.now(timezone.utc).isoformat(),
     }
+
+
+_CLAIM_APPROVED = ("APPROVED", "PAID", "SETTLED")
+_CLAIM_DENIED = ("DENIED", "REJECTED")
+_PAYMENT_METHODS = ("UPI", "CARD", "CASH", "WALLET", "NETBANKING")
+_METHOD_LABELS = {"UPI": "UPI", "CARD": "Card", "CASH": "Cash", "WALLET": "Wallet", "NETBANKING": "Net Banking"}
+
+
+def _invoice_display_status(total: float, balance: float, created: datetime | None) -> str:
+    if balance <= 0:
+        return "Paid"
+    if 0 < balance < total:
+        return "Partially Paid"
+    created = created.replace(tzinfo=timezone.utc) if created and created.tzinfo is None else created
+    if created and (datetime.now(timezone.utc) - created).days > 30:
+        return "Overdue"
+    return "Unpaid"
+
+
+@router.get("/billing")
+def billing(db: Session = Depends(get_db), _claims: dict = Depends(require_os_staff)) -> dict:
+    """Billing Command Center — KPIs, AR aging, claims, payment modes, worklist."""
+    invoices = db.scalars(select(models.Invoice)).all()
+    claims = db.scalars(select(models.InsuranceClaim)).all()
+    payments = db.scalars(
+        select(models.Payment).where(models.Payment.status == "COMPLETED")
+    ).all()
+
+    # KPIs
+    claims_approved = sum(1 for c in claims if (c.status or "").upper() in _CLAIM_APPROVED)
+    claims_denied = sum(1 for c in claims if (c.status or "").upper() in _CLAIM_DENIED)
+    claims_pending = len(claims) - claims_approved - claims_denied
+    refunds = sum(1 for p in db.scalars(select(models.Payment).where(models.Payment.status == "REFUNDED")))
+
+    # AR aging by invoice balance and age
+    now = datetime.now(timezone.utc)
+    ar_buckets = {"0 – 30 Days": 0.0, "31 – 60 Days": 0.0, "61 – 90 Days": 0.0, "91 – 120 Days": 0.0, "120+ Days": 0.0}
+    for inv in invoices:
+        bal = inv.balance or 0.0
+        if bal <= 0:
+            continue
+        created = inv.created_ts
+        created = created.replace(tzinfo=timezone.utc) if created and created.tzinfo is None else created
+        days = (now - created).days if created else 0
+        key = "0 – 30 Days" if days <= 30 else "31 – 60 Days" if days <= 60 else "61 – 90 Days" if days <= 90 else "91 – 120 Days" if days <= 120 else "120+ Days"
+        ar_buckets[key] += bal
+    total_ar = sum(ar_buckets.values())
+
+    # Payment mode split
+    mode_totals: dict[str, float] = {}
+    for p in payments:
+        method = (p.method or "OTHER").upper()
+        mode_totals[method] = mode_totals.get(method, 0.0) + (p.amount or 0.0)
+    total_collected = sum(mode_totals.values())
+    payment_modes = [
+        {"label": _METHOD_LABELS.get(m, m.title()), "value": _fmt_inr_indian(v),
+         "pct": round(v / total_collected * 100, 1) if total_collected else 0.0}
+        for m, v in sorted(mode_totals.items(), key=lambda kv: kv[1], reverse=True)
+    ]
+
+    # Invoice worklist (recent) joined to patient
+    patients = {p.patient_id: p for p in db.scalars(select(models.Patient))}
+    encounters = {e.encounter_id: e for e in db.scalars(select(models.Encounter))}
+    recent_invoices = sorted(invoices, key=lambda i: i.created_ts or now, reverse=True)[:8]
+    worklist = []
+    for inv in recent_invoices:
+        pt = patients.get(inv.patient_id)
+        enc = encounters.get(inv.encounter_id)
+        visit = (enc.visit_type if enc else None) or "OPD"
+        worklist.append({
+            "invoice": f"INV-{inv.invoice_id[:8].upper()}",
+            "name": pt.full_name if pt else "—",
+            "mrn": (pt.mrn if pt else None) or "—",
+            "date": (inv.created_ts or now).strftime("%b %d, %Y"),
+            "visit": {"OPD": "Outpatient", "FOLLOWUP": "Follow-up"}.get(visit, visit.title()),
+            "gross": _fmt_inr_indian(inv.total or 0.0),
+            "balance": _fmt_inr_indian(inv.balance or 0.0),
+            "status": _invoice_display_status(inv.total or 0.0, inv.balance or 0.0, inv.created_ts),
+        })
+
+    # Recent payments joined to patient via invoice
+    inv_by_id = {i.invoice_id: i for i in invoices}
+    recent_payments = sorted(payments, key=lambda p: p.paid_ts or now, reverse=True)[:6]
+    payment_rows = []
+    for p in recent_payments:
+        inv = inv_by_id.get(p.invoice_id)
+        pt = patients.get(inv.patient_id) if inv else None
+        payment_rows.append({
+            "receipt": f"RCPT-{p.payment_id[:7].upper()}",
+            "name": pt.full_name if pt else "—",
+            "method": _METHOD_LABELS.get((p.method or "").upper(), (p.method or "—").title()),
+            "amount": _fmt_inr_indian(p.amount or 0.0),
+            "on": (p.paid_ts or now).strftime("%b %d, %Y"),
+        })
+
+    return {
+        "kpis": {
+            "totalInvoices": len(invoices),
+            "claimsSubmitted": len(claims),
+            "claimsPaid": claims_approved,
+            "denials": claims_denied,
+            "paymentPosts": len(payments),
+            "refunds": refunds,
+        },
+        "arAging": {
+            "total": _fmt_inr_indian(total_ar),
+            "segments": [
+                {"label": k, "value": _fmt_inr_indian(v),
+                 "pct": round(v / total_ar * 100, 1) if total_ar else 0.0}
+                for k, v in ar_buckets.items()
+            ],
+        },
+        "claimsSummary": {
+            "total": len(claims),
+            "approved": claims_approved,
+            "denied": claims_denied,
+            "pending": max(0, claims_pending),
+        },
+        "paymentModes": {"total": _fmt_inr_indian(total_collected), "modes": payment_modes},
+        "invoices": worklist,
+        "recentPayments": payment_rows,
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+
