@@ -967,32 +967,35 @@ function copilotReply(q: string): string {
 
 /* --------------------------------------------------------- Patient 360 tabs --- */
 
-function TimelineTab() {
+function TimelineTab({ data }: { data?: OsPatient }) {
+  const items = data
+    ? data.timeline.map((e) => ({ date: e.date, year: "", kind: e.kind, time: e.time, dept: "", detail: e.detail, sub: "", status: e.status, tone: e.tone }))
+    : TIMELINE;
   return (
     <div className="max-w-3xl">
-      {TIMELINE.map((e, i) => (
+      {data && items.length === 0 && <div className={`${card} p-6 text-center text-[11.5px] text-slate-400`}>No timeline activity for this patient.</div>}
+      {items.map((e, i) => (
         <div key={i} className="flex gap-3">
           <div className="flex w-12 shrink-0 flex-col items-end pt-0.5 text-right">
             <span className="text-[11px] font-bold text-slate-600">{e.date}</span>
             {e.year && <span className="text-[9.5px] text-slate-400">{e.year}</span>}
           </div>
           <div className="flex flex-col items-center">
-            <span className="mt-1 grid h-7 w-7 place-items-center rounded-full border border-black/[0.08] bg-white text-slate-400"><Stethoscope size={13} /></span>
-            {i < TIMELINE.length - 1 && <span className="my-0.5 w-px flex-1 bg-black/[0.09]" />}
+            <span className="mt-1 grid h-7 w-7 place-items-center rounded-full border border-black/[0.08] bg-white" style={{ color: e.tone }}><Stethoscope size={13} /></span>
+            {i < items.length - 1 && <span className="my-0.5 w-px flex-1 bg-black/[0.09]" />}
           </div>
           <div className={`${card} mb-2.5 flex flex-1 items-start justify-between p-2.5`}>
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-[12.5px] font-bold text-slate-700">
-                {e.kind}<span className="text-[10.5px] font-medium text-slate-400">{e.time} · {e.dept}</span>
+                {e.kind}<span className="text-[10.5px] font-medium text-slate-400">{e.time}{e.dept ? ` · ${e.dept}` : ""}</span>
               </div>
-              <div className="mt-0.5 text-[11.5px] text-slate-600">{e.detail}</div>
-              <div className="text-[11px] text-slate-400">{e.sub}</div>
+              {e.detail && <div className="mt-0.5 text-[11.5px] text-slate-600">{e.detail}</div>}
+              {e.sub && <div className="text-[11px] text-slate-400">{e.sub}</div>}
             </div>
             <div className="ml-2 flex shrink-0 items-center gap-1.5"><Pill tone={e.tone}>{e.status}</Pill><ChevronDown size={14} className="text-slate-300" /></div>
           </div>
         </div>
       ))}
-      <button type="button" className="mx-auto mt-1 block rounded-lg border border-black/[0.08] bg-white/70 px-4 py-1.5 text-[11.5px] font-semibold text-[#0078d4]">View Full Timeline</button>
     </div>
   );
 }
@@ -1346,11 +1349,16 @@ function ProceduresTab() {
   );
 }
 
-function DocumentsTab() {
+function DocumentsTab({ data }: { data?: OsPatient }) {
   const [folder, setFolder] = useState("All Documents");
   const [q, setQ] = useState("");
-  const rows = DOCS.filter((d) => (folder === "All Documents" || d.cat === folder) && d.name.toLowerCase().includes(q.toLowerCase()));
-  const total = DOC_FOLDERS.find((f) => f.name === folder)?.count ?? rows.length;
+  const liveDocs = data ? data.documents.map((d) => ({ name: d.name, cat: d.category, on: d.date, by: "System", uri: d.uri })) : null;
+  const liveFolders = liveDocs
+    ? [{ name: "All Documents", count: liveDocs.length }, ...Array.from(new Set(liveDocs.map((d) => d.cat))).map((c) => ({ name: c, count: liveDocs.filter((d) => d.cat === c).length }))]
+    : DOC_FOLDERS;
+  const source = liveDocs ?? DOCS.map((d) => ({ ...d, uri: null as string | null }));
+  const rows = source.filter((d) => (folder === "All Documents" || d.cat === folder) && d.name.toLowerCase().includes(q.toLowerCase()));
+  const total = (liveFolders.find((f) => f.name === folder)?.count) ?? rows.length;
   return (
     <div className={`${card} p-3`}>
       <div className="mb-3 flex items-center justify-between">
@@ -1362,10 +1370,10 @@ function DocumentsTab() {
       </div>
       <div className="grid gap-3 lg:grid-cols-[190px_1fr]">
         <div className="space-y-0.5">
-          {DOC_FOLDERS.map((f) => {
+          {liveFolders.map((f) => {
             const on = folder === f.name;
             return (
-              <button key={f.name} type="button" onClick={() => setFolder(f.name)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[11.5px] font-medium transition"
+              <button key={f.name} type="button" data-fn onClick={() => setFolder(f.name)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[11.5px] font-medium transition"
                 style={{ color: on ? "#004578" : "#4b5563", background: on ? "rgba(0,120,212,.1)" : "transparent" }}>
                 <Folder size={13} className="text-slate-400" />
                 <span className="flex-1 truncate">{f.name}</span>
@@ -1388,7 +1396,7 @@ function DocumentsTab() {
               </tr></thead>
               <tbody>
                 {rows.map((d) => (
-                  <tr key={d.name} className="border-t border-black/[0.05]">
+                  <tr key={d.name + d.on} className="border-t border-black/[0.05]">
                     <td className="py-1.5 pr-3"><span className="flex items-center gap-2 font-semibold text-slate-700"><FileText size={13} className="text-[#D13438]" /> {d.name}</span></td>
                     <td className="py-1.5 pr-3 text-slate-500">{d.cat}</td>
                     <td className="py-1.5 pr-3 text-slate-500">{d.on}</td>
@@ -1396,17 +1404,12 @@ function DocumentsTab() {
                     <td className="py-1.5"><div className="flex gap-2 text-slate-400"><Eye size={14} /><Download size={14} /><MoreHorizontal size={14} /></div></td>
                   </tr>
                 ))}
-                {rows.length === 0 && (<tr><td colSpan={5} className="py-4 text-center text-[11px] text-slate-400">No documents match.</td></tr>)}
+                {rows.length === 0 && (<tr><td colSpan={5} className="py-4 text-center text-[11px] text-slate-400">{data ? "No documents on record." : "No documents match."}</td></tr>)}
               </tbody>
             </table>
           </div>
-          <div className="mt-2 flex items-center justify-between text-[10.5px] text-slate-400">
-            <span>Showing 1 to {rows.length} of {total}</span>
-            <div className="flex items-center gap-1">
-              {["1", "2", "3", "4", "5", "…", "21"].map((p, i) => (
-                <span key={i} className="grid h-6 min-w-6 place-items-center rounded-md px-1.5 font-semibold" style={{ background: i === 0 ? "#0078d4" : "transparent", color: i === 0 ? "#fff" : "#64748b" }}>{p}</span>
-              ))}
-            </div>
+          <div className="mt-2 text-[10.5px] text-slate-400">
+            <span>Showing {rows.length} of {total}</span>
           </div>
         </div>
       </div>
@@ -1536,11 +1539,17 @@ function EncountersTab({ data }: { data?: OsPatient }) {
   );
 }
 
-function NotesTab() {
+function NotesTab({ data }: { data?: OsPatient }) {
+  const notes = data
+    ? data.notes.map((n) => ({ kind: n.kind === "SOAP" ? "SOAP Note" : n.kind, dept: n.status, when: n.date, by: n.author, tone: n.status === "APPROVED" ? "#16a34a" : "#CA5010", excerpt: (n.excerpt || "").slice(0, 90), body: n.excerpt || "No content." }))
+    : NOTES_LIST;
   const [sel, setSel] = useState(0);
-  const note = NOTES_LIST[sel];
-  const isSoap = note.kind === "SOAP Note";
-  const isDraft = isSoap || note.kind.includes("Draft");
+  const note = notes[Math.min(sel, Math.max(0, notes.length - 1))];
+  const isSoap = !data && !!note && note.kind === "SOAP Note";
+  const isDraft = !!note && (isSoap || note.kind.includes("Draft"));
+  if (data && notes.length === 0) {
+    return <div className={`${card} p-6 text-center text-[11.5px] text-slate-400`}>No clinical notes for this patient.</div>;
+  }
   return (
     <div className="grid gap-3 lg:grid-cols-[290px_1fr]">
       <div className={`${card} p-3`}>
@@ -1552,8 +1561,8 @@ function NotesTab() {
           <Search size={13} /><input className="w-full bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400" placeholder="Search notes..." />
         </label>
         <div className="space-y-1.5">
-          {NOTES_LIST.map((n, i) => (
-            <button key={n.kind} type="button" onClick={() => setSel(i)} className="w-full rounded-lg border p-2 text-left transition"
+          {notes.map((n, i) => (
+            <button key={n.kind + n.when} type="button" data-fn onClick={() => setSel(i)} className="w-full rounded-lg border p-2 text-left transition"
               style={{ borderColor: i === sel ? "rgba(0,120,212,.4)" : "rgba(0,0,0,.06)", background: i === sel ? "rgba(0,120,212,.05)" : "rgba(255,255,255,.6)" }}>
               <div className="flex items-center justify-between">
                 <span className="text-[12px] font-bold text-slate-700">{n.kind}</span>
@@ -1564,7 +1573,6 @@ function NotesTab() {
             </button>
           ))}
         </div>
-        <div className="mt-2 text-center text-[10.5px] text-slate-400">Showing 1 to 5 of 18 notes</div>
       </div>
       <div className={`${card} flex flex-col p-3`}>
         <div className="mb-2 flex items-center justify-between">
@@ -1587,15 +1595,13 @@ function NotesTab() {
           )) : (
             <div className="rounded-lg border border-black/[0.06] bg-white/60 p-3">
               <div className="mb-0.5 text-[10.5px] font-bold uppercase tracking-wide text-slate-400">Note</div>
-              <p className="text-[11.5px] leading-relaxed text-slate-600">{note.body}</p>
+              <p className="whitespace-pre-wrap text-[11.5px] leading-relaxed text-slate-600">{note.body}</p>
             </div>
           )}
-          <button type="button" className="text-[11px] font-semibold text-[#0078d4]">+ Add Section (e.g. Discharge, Education)</button>
         </div>
         <div className="mt-3 flex items-center justify-end gap-2 border-t border-black/[0.06] pt-2.5">
           <button type="button" className="grid h-8 w-8 place-items-center rounded-lg border border-black/[0.08] bg-white/70 text-slate-500"><Mic size={15} /></button>
           <button type="button" className="rounded-lg border border-black/[0.08] bg-white/70 px-3 py-1.5 text-[11.5px] font-semibold text-slate-600">Save Draft</button>
-          <button type="button" className="rounded-lg border border-[rgba(0,120,212,.3)] bg-white/70 px-3 py-1.5 text-[11.5px] font-semibold text-[#0a5aa8]">Save</button>
           <button type="button" className="rounded-lg bg-[#0078d4] px-3 py-1.5 text-[11.5px] font-semibold text-white">Sign Note</button>
         </div>
       </div>
@@ -1849,16 +1855,16 @@ function PatientsView({ search = "" }: { search?: string }) {
       {/* content */}
       <div>
         {tab === "Overview" && <PatientOverview data={pt} />}
-        {tab === "Timeline" && <TimelineTab />}
+        {tab === "Timeline" && <TimelineTab data={pt} />}
         {tab === "Vitals" && <VitalsTab data={pt} />}
         {tab === "Labs" && <LabsTab data={pt} />}
         {tab === "Imaging" && <ImagingTab data={pt} />}
         {tab === "Medications" && <MedsTab data={pt} />}
         {tab === "Procedures" && <ProceduresTab />}
-        {tab === "Documents" && <DocumentsTab />}
+        {tab === "Documents" && <DocumentsTab data={pt} />}
         {tab === "Care Plan" && <CarePlanTab />}
         {tab === "Encounters" && <EncountersTab data={pt} />}
-        {tab === "Notes" && <NotesTab />}
+        {tab === "Notes" && <NotesTab data={pt} />}
       </div>
     </div>
   );

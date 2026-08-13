@@ -662,6 +662,52 @@ def patient_overview(patient_id: str, db: Session = Depends(get_db), _claims: di
 
     risk = "High" if abnormal >= 3 else "Moderate" if abnormal >= 1 else "Low"
 
+    # Clinical notes (SOAP etc.) authored on this patient's encounters.
+    staff_by_id = {s.staff_id: s for s in db.scalars(select(models.Staff))}
+    note_rows = db.scalars(
+        select(models.ClinicalNote).where(models.ClinicalNote.encounter_id.in_(enc_ids or [""]))
+        .order_by(models.ClinicalNote.created_ts.desc()).limit(10)
+    ).all() if enc_ids else []
+    notes = [{
+        "kind": n.note_type or "Note",
+        "date": (n.approved_ts or n.created_ts).strftime("%d %b %Y, %I:%M %p"),
+        "author": (staff_by_id[n.authored_by].name if n.authored_by in staff_by_id else "Clinician"),
+        "status": n.status,
+        "excerpt": ((n.final_text or n.ai_draft or "").strip() or "No content.")[:600],
+        "icd10": list(n.icd10_codes or []),
+    } for n in note_rows]
+
+    documents = [{
+        "name": d.title or d.doc_type,
+        "category": d.doc_type,
+        "date": d.created_ts.strftime("%d %b %Y"),
+        "uri": d.uri if (d.uri or "").startswith("http") else None,
+    } for d in db.scalars(
+        select(models.Document).where(models.Document.patient_id == patient_id)
+        .order_by(models.Document.created_ts.desc()).limit(30)
+    )]
+
+    # Merged chronological activity feed.
+    events: list[tuple[datetime, dict]] = []
+    for e in encs:
+        events.append((e.arrival_ts, {"kind": f"{e.visit_type} Encounter", "detail": e.department or "General", "status": e.status, "tone": "#0078d4"}))
+    for order, result in lab_rows:
+        label = _LAB_FLAG_LABEL.get((result.abnormal_flag or "N").upper(), "Normal")
+        v = f"{result.value:g} {result.unit or ''}".strip() if result.value is not None else ""
+        events.append((result.resulted_ts or order.ordered_ts, {"kind": "Lab Result", "detail": f"{result.analyte or order.test_name}: {v}".strip(), "status": label, "tone": "#D13438" if label != "Normal" else "#16a34a"}))
+    for n in note_rows:
+        events.append((n.approved_ts or n.created_ts, {"kind": n.note_type or "Note", "detail": ((n.final_text or n.ai_draft or "").strip()[:120] or "Clinical note"), "status": n.status, "tone": "#8764B8"}))
+
+    def _ts(dt: datetime) -> datetime:
+        return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+    events.sort(key=lambda ev: _ts(ev[0]), reverse=True)
+    timeline = [{
+        "date": ev[0].strftime("%d %b"),
+        "time": ev[0].strftime("%I:%M %p"),
+        "kind": ev[1]["kind"], "detail": ev[1]["detail"],
+        "status": ev[1]["status"], "tone": ev[1]["tone"],
+    } for ev in events[:15]]
+
     return {
         "patientId": p.patient_id,
         "name": p.full_name,
@@ -695,6 +741,9 @@ def patient_overview(patient_id: str, db: Session = Depends(get_db), _claims: di
         "careTeam": care_team,
         "vitalsHistory": vitals_history,
         "imaging": imaging,
+        "notes": notes,
+        "documents": documents,
+        "timeline": timeline,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
     }
 

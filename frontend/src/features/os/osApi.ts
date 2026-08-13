@@ -132,6 +132,9 @@ export interface OsPatient {
   careTeam: { name: string; role: string; badge: string }[];
   vitalsHistory: { date: string; bp: string; hr: number | null; spo2: number | null; temp: number | null; rr: number | null; flag: boolean }[];
   imaging: { name: string; date: string; type: string; uri: string | null }[];
+  notes: { kind: string; date: string; author: string; status: string; excerpt: string; icd10: string[] }[];
+  documents: { name: string; category: string; date: string; uri: string | null }[];
+  timeline: { date: string; time: string; kind: string; detail: string; status: string; tone: string }[];
   generatedAt: string;
 }
 
