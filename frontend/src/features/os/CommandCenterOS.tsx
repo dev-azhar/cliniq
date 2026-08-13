@@ -15,7 +15,7 @@ import {
   TrendingUp, Truck, Star, CreditCard, Wallet, Landmark,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
-import { useOsOverview, useOsBilling } from "./osApi";
+import { useOsOverview, useOsBilling, useOsInventory } from "./osApi";
 import { getOsSession, clearOsSession, osInitials, fetchOsMe } from "./osSession";
 
 /* ------------------------------------------------------------------ data --- */
@@ -3792,68 +3792,82 @@ function BillingView() {
 
 function InventoryView() {
   const [wlTab, setWlTab] = useState("All Items");
+  const { data: inv } = useOsInventory();
+  const ik = inv?.kpis;
   const kpis = [
-    { label: "Total Items", value: "4,586", icon: Boxes, color: "#0078d4" },
-    { label: "Stock Value", value: "₹ 8.64 Cr", icon: IndianRupee, color: "#107C10" },
-    { label: "Purchase Orders", value: "52", icon: FileText, color: "#8764B8" },
-    { label: "GRN Pending", value: "18", icon: Truck, color: "#CA5010" },
-    { label: "Transfers in Transit", value: "14", icon: RefreshCw, color: "#038387" },
-    { label: "Suppliers", value: "236", icon: Building2, color: "#0c3b63" },
+    { label: "Total Items", value: ik ? ik.totalItems.toLocaleString() : "4,586", icon: Boxes, color: "#0078d4" },
+    { label: "Stock Value", value: ik ? ik.stockValue : "₹ 8.64 Cr", icon: IndianRupee, color: "#107C10" },
+    { label: "Purchase Orders", value: ik ? ik.purchaseOrders.toLocaleString() : "52", icon: FileText, color: "#8764B8" },
+    { label: "GRN Pending", value: ik ? ik.grnPending.toLocaleString() : "18", icon: Truck, color: "#CA5010" },
+    { label: "Transfers in Transit", value: ik ? ik.transfersInTransit.toLocaleString() : "14", icon: RefreshCw, color: "#038387" },
+    { label: "Suppliers", value: ik ? ik.suppliers.toLocaleString() : "236", icon: Building2, color: "#0c3b63" },
   ];
-  const wlTabs = [["All Items", 4586], ["Low Stock", 126], ["Out of Stock", 28], ["Expiring Soon", 94], ["Non-moving", 132]] as const;
-  const items = [
-    { code: "MED-000123", name: "Paracetamol 650mg Tablet", cat: "Pharmaceutical", unit: "Tablet", cur: "1,250", min: "500", max: "2,000", status: "In Stock", tone: "#16a34a", upd: "May 20, 2024" },
-    { code: "CON-000456", name: "Surgical Gloves (M)", cat: "Medical Consumable", unit: "Box", cur: "85", min: "100", max: "500", status: "Low Stock", tone: "#CA5010", upd: "May 20, 2024" },
-    { code: "CON-000789", name: "IV Cannula 22G", cat: "Medical Consumable", unit: "Pcs", cur: "0", min: "200", max: "1,000", status: "Out of Stock", tone: "#D13438", upd: "May 20, 2024" },
-    { code: "SUR-000321", name: "Syringe 5ml", cat: "Medical Consumable", unit: "Pcs", cur: "2,860", min: "500", max: "5,000", status: "In Stock", tone: "#16a34a", upd: "May 20, 2024" },
-    { code: "EQU-000654", name: "BP Monitor", cat: "Equipment", unit: "Pcs", cur: "12", min: "5", max: "20", status: "In Stock", tone: "#16a34a", upd: "May 20, 2024" },
-  ];
-  const orders = [
-    { po: "PO-240520-001", supplier: "Medlink Pvt Ltd", date: "May 20, 2024", status: "Ordered", tone: "#0078d4", value: "₹ 2.45 L" },
-    { po: "PO-240520-010", supplier: "HealthSupplies India", date: "May 19, 2024", status: "Approved", tone: "#8764B8", value: "₹ 1.12 L" },
-    { po: "PO-240519-018", supplier: "Surgitech Solutions", date: "May 18, 2024", status: "Partially Received", tone: "#CA5010", value: "₹ 3.68 L" },
-    { po: "PO-240518-015", supplier: "PharmaCare Pvt Ltd", date: "May 18, 2024", status: "Delivered", tone: "#16a34a", value: "₹ 0.98 L" },
-    { po: "PO-240517-009", supplier: "Global Medicals", date: "May 17, 2024", status: "Ordered", tone: "#0078d4", value: "₹ 1.75 L" },
-  ];
-  const expiring = [
+  const tc = inv?.tabCounts;
+  const wlTabs: readonly (readonly [string, number])[] = tc
+    ? [["All Items", tc.allItems], ["Low Stock", tc.lowStock], ["Out of Stock", tc.outOfStock], ["Expiring Soon", tc.expiringSoon], ["Non-moving", tc.nonMoving]]
+    : [["All Items", 4586], ["Low Stock", 126], ["Out of Stock", 28], ["Expiring Soon", 94], ["Non-moving", 132]];
+  const itemTone = (s: string) => (s === "Out of Stock" ? "#D13438" : s === "Low Stock" ? "#CA5010" : s === "Expired" ? "#8764B8" : s === "Non-moving" ? "#94a3b8" : "#16a34a");
+  const items = inv?.items?.length
+    ? inv.items.map((r) => ({ code: r.code, name: r.name, cat: r.category, unit: r.unit, cur: r.current, min: r.min, max: r.max, status: r.status, tone: itemTone(r.status), upd: r.updated }))
+    : [
+      { code: "MED-000123", name: "Paracetamol 650mg Tablet", cat: "Pharmaceutical", unit: "Tablet", cur: "1,250", min: "500", max: "2,000", status: "In Stock", tone: "#16a34a", upd: "May 20, 2024" },
+      { code: "CON-000456", name: "Surgical Gloves (M)", cat: "Medical Consumable", unit: "Box", cur: "85", min: "100", max: "500", status: "Low Stock", tone: "#CA5010", upd: "May 20, 2024" },
+      { code: "CON-000789", name: "IV Cannula 22G", cat: "Medical Consumable", unit: "Pcs", cur: "0", min: "200", max: "1,000", status: "Out of Stock", tone: "#D13438", upd: "May 20, 2024" },
+      { code: "SUR-000321", name: "Syringe 5ml", cat: "Medical Consumable", unit: "Pcs", cur: "2,860", min: "500", max: "5,000", status: "In Stock", tone: "#16a34a", upd: "May 20, 2024" },
+      { code: "EQU-000654", name: "BP Monitor", cat: "Equipment", unit: "Pcs", cur: "12", min: "5", max: "20", status: "In Stock", tone: "#16a34a", upd: "May 20, 2024" },
+    ];
+  const poTone = (s: string) => (s === "Delivered" ? "#16a34a" : s === "Approved" ? "#8764B8" : s === "Partially Received" ? "#CA5010" : "#0078d4");
+  const orders = inv?.purchaseOrders?.length
+    ? inv.purchaseOrders.map((o) => ({ po: o.po, supplier: o.supplier, date: o.date, status: o.status, tone: poTone(o.status), value: o.value }))
+    : [
+      { po: "PO-240520-001", supplier: "Medlink Pvt Ltd", date: "May 20, 2024", status: "Ordered", tone: "#0078d4", value: "₹ 2.45 L" },
+      { po: "PO-240520-010", supplier: "HealthSupplies India", date: "May 19, 2024", status: "Approved", tone: "#8764B8", value: "₹ 1.12 L" },
+      { po: "PO-240519-018", supplier: "Surgitech Solutions", date: "May 18, 2024", status: "Partially Received", tone: "#CA5010", value: "₹ 3.68 L" },
+      { po: "PO-240518-015", supplier: "PharmaCare Pvt Ltd", date: "May 18, 2024", status: "Delivered", tone: "#16a34a", value: "₹ 0.98 L" },
+      { po: "PO-240517-009", supplier: "Global Medicals", date: "May 17, 2024", status: "Ordered", tone: "#0078d4", value: "₹ 1.75 L" },
+    ];
+  const expiring = inv?.expiring?.length ? inv.expiring : [
     { name: "Ceftriaxone 1gm Inj.", batch: "B240315", exp: "Jun 05, 2024", qty: "150" },
     { name: "Pantoprazole 40mg Inj.", batch: "B240410", exp: "Jun 12, 2024", qty: "90" },
     { name: "Normal Saline 100ml", batch: "B240401", exp: "Jun 18, 2024", qty: "200" },
     { name: "Metronidazole 100ml", batch: "B240310", exp: "Jun 25, 2024", qty: "120" },
     { name: "Meropenem 1gm Inj.", batch: "B240402", exp: "Jun 28, 2024", qty: "60" },
   ];
-  const consumed = [
+  const consumed = inv?.topConsumed?.length ? inv.topConsumed : [
     { name: "Paracetamol 650mg Tablet", qty: "12,450", unit: "Tablet" },
     { name: "IV Fluid NS 100ml", qty: "8,320", unit: "Bottle" },
     { name: "Surgical Gloves (M)", qty: "7,850", unit: "Box" },
     { name: "Syringe 5ml", qty: "6,240", unit: "Pcs" },
     { name: "IV Cannula 22G", qty: "5,910", unit: "Pcs" },
   ];
-  const stores = [
+  const stores = inv?.stores?.length ? inv.stores : [
     { store: "Central Store", total: "2,458", inStock: "2,102", low: "86", out: "18", value: "₹ 4.25 Cr" },
     { store: "Pharmacy Store", total: "1,245", inStock: "1,050", low: "28", out: "9", value: "₹ 2.16 Cr" },
     { store: "OT Store", total: "583", inStock: "506", low: "7", out: "5", value: "₹ 1.02 Cr" },
     { store: "ICU Store", total: "300", inStock: "260", low: "3", out: "2", value: "₹ 0.65 Cr" },
   ];
-  const suppliers = [
+  const suppliers = inv?.suppliers?.length ? inv.suppliers : [
     { name: "Medlink Pvt Ltd", otd: "98%", quality: "4.6", fill: "96%", rating: 5 },
     { name: "HealthSupplies India", otd: "95%", quality: "4.3", fill: "94%", rating: 4 },
     { name: "Surgitech Solutions", otd: "92%", quality: "4.4", fill: "91%", rating: 4 },
     { name: "PharmaCare Pvt Ltd", otd: "90%", quality: "4.1", fill: "88%", rating: 4 },
     { name: "Global Medicals", otd: "89%", quality: "4.2", fill: "87%", rating: 4 },
   ];
+  const stockOv = inv?.stockOverview
+    ? { center: inv.stockOverview.total, segments: inv.stockOverview.segments.map((s) => ({ pct: s.pct, color: s.color })), legend: inv.stockOverview.segments.map((s) => ({ label: s.label, value: s.value, color: s.color })) }
+    : { center: "4,586", segments: [{ pct: 83.8, color: "#16a34a" }, { pct: 2.7, color: "#CA5010" }, { pct: 0.6, color: "#D13438" }, { pct: 2.9, color: "#94a3b8" }, { pct: 1.3, color: "#8764B8" }], legend: [{ label: "In Stock", value: "3,842 (83.8%)", color: "#16a34a" }, { label: "Low Stock", value: "126 (2.7%)", color: "#CA5010" }, { label: "Out of Stock", value: "28 (0.6%)", color: "#D13438" }, { label: "Non-moving (90+ Days)", value: "132 (2.9%)", color: "#94a3b8" }, { label: "Expired", value: "58 (1.3%)", color: "#8764B8" }] };
+  const valCat = inv?.valueByCategory
+    ? { center: inv.valueByCategory.total, segments: inv.valueByCategory.segments.map((s) => ({ pct: s.pct, color: s.color })), legend: inv.valueByCategory.segments.map((s) => ({ label: s.label, value: `${s.value} · ${s.pct}%`, color: s.color })) }
+    : { center: "₹ 8.64 Cr", segments: [{ pct: 37.7, color: "#0078d4" }, { pct: 27.9, color: "#16a34a" }, { pct: 17.6, color: "#CA8A04" }, { pct: 11.1, color: "#8764B8" }, { pct: 5.7, color: "#94a3b8" }], legend: [{ label: "Pharmaceuticals", value: "₹ 3.26 Cr · 37.7%", color: "#0078d4" }, { label: "Medical Consumables", value: "₹ 2.41 Cr · 27.9%", color: "#16a34a" }, { label: "Surgical Items", value: "₹ 1.52 Cr · 17.6%", color: "#CA8A04" }, { label: "Equipment", value: "₹ 0.96 Cr · 11.1%", color: "#8764B8" }, { label: "Others", value: "₹ 0.49 Cr · 5.7%", color: "#94a3b8" }] };
+
   return (
     <div className="space-y-4">
       <ViewHead title="Inventory Command Center" subtitle="Real-time overview of inventory operations" />
       <KpiRow items={kpis} />
 
       <div className="grid gap-3 md:grid-cols-2">
-        <DonutCard title="Stock Overview" action="View Analytics" center="4,586" sub="Total Items"
-          segments={[{ pct: 83.8, color: "#16a34a" }, { pct: 2.7, color: "#CA5010" }, { pct: 0.6, color: "#D13438" }, { pct: 2.9, color: "#94a3b8" }, { pct: 1.3, color: "#8764B8" }, { pct: 8.7, color: "#e2e8f0" }]}
-          legend={[{ label: "In Stock", value: "3,842 (83.8%)", color: "#16a34a" }, { label: "Low Stock", value: "126 (2.7%)", color: "#CA5010" }, { label: "Out of Stock", value: "28 (0.6%)", color: "#D13438" }, { label: "Non-moving (90+ Days)", value: "132 (2.9%)", color: "#94a3b8" }, { label: "Expired", value: "58 (1.3%)", color: "#8764B8" }]} />
-        <DonutCard title="Stock Value by Category" action="View Full Report" center="₹ 8.64 Cr" sub="Total Value"
-          segments={[{ pct: 37.7, color: "#0078d4" }, { pct: 27.9, color: "#16a34a" }, { pct: 17.6, color: "#CA8A04" }, { pct: 11.1, color: "#8764B8" }, { pct: 5.7, color: "#94a3b8" }]}
-          legend={[{ label: "Pharmaceuticals", value: "₹ 3.26 Cr · 37.7%", color: "#0078d4" }, { label: "Medical Consumables", value: "₹ 2.41 Cr · 27.9%", color: "#16a34a" }, { label: "Surgical Items", value: "₹ 1.52 Cr · 17.6%", color: "#CA8A04" }, { label: "Equipment", value: "₹ 0.96 Cr · 11.1%", color: "#8764B8" }, { label: "Others", value: "₹ 0.49 Cr · 5.7%", color: "#94a3b8" }]} />
+        <DonutCard title="Stock Overview" action="View Analytics" center={stockOv.center} sub="Total Items" segments={stockOv.segments} legend={stockOv.legend} />
+        <DonutCard title="Stock Value by Category" action="View Full Report" center={valCat.center} sub="Total Value" segments={valCat.segments} legend={valCat.legend} />
       </div>
 
       {/* Inventory Worklist */}
@@ -3897,7 +3911,7 @@ function InventoryView() {
             </tbody>
           </table>
         </div>
-        <div className="mt-2 text-[11px] text-slate-400">Showing 1 to 5 of 4,586 items</div>
+        <div className="mt-2 text-[11px] text-slate-400">Showing {items.length} of {ik ? ik.totalItems.toLocaleString() : "4,586"} items</div>
       </div>
 
       {/* Purchase orders · expiring · top consumed */}
@@ -3982,9 +3996,7 @@ function InventoryView() {
           </div>
         </div>
 
-        <DonutCard title="Inventory Valuation Summary" action="View Report" center="₹ 8.64 Cr" sub="Total Value"
-          segments={[{ pct: 37.7, color: "#0078d4" }, { pct: 27.9, color: "#16a34a" }, { pct: 17.6, color: "#CA8A04" }, { pct: 11.1, color: "#8764B8" }, { pct: 5.7, color: "#94a3b8" }]}
-          legend={[{ label: "Pharmaceuticals", value: "₹ 3.26 Cr · 37.7%", color: "#0078d4" }, { label: "Medical Consumables", value: "₹ 2.41 Cr · 27.9%", color: "#16a34a" }, { label: "Surgical Items", value: "₹ 1.52 Cr · 17.6%", color: "#CA8A04" }, { label: "Equipment", value: "₹ 0.96 Cr · 11.1%", color: "#8764B8" }, { label: "Others", value: "₹ 0.49 Cr · 5.7%", color: "#94a3b8" }]} />
+        <DonutCard title="Inventory Valuation Summary" action="View Report" center={valCat.center} sub="Total Value" segments={valCat.segments} legend={valCat.legend} />
       </div>
     </div>
   );

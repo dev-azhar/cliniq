@@ -454,6 +454,49 @@ class Document(Base):
     created_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
+# ------------------------------------------------------------------------------------- Inventory / Supply chain
+class Supplier(Base):
+    __tablename__ = "supplier"
+
+    supplier_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(120))
+    on_time_pct: Mapped[float] = mapped_column(Float, default=95.0)
+    quality_score: Mapped[float] = mapped_column(Float, default=4.5)
+    fill_rate: Mapped[float] = mapped_column(Float, default=95.0)
+    rating: Mapped[int] = mapped_column(Integer, default=4)
+
+
+class InventoryItem(Base):
+    __tablename__ = "inventory_item"
+
+    item_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    code: Mapped[str] = mapped_column(String(30))
+    name: Mapped[str] = mapped_column(String(160))
+    category: Mapped[str] = mapped_column(String(40))  # Pharmaceutical / Medical Consumable / Surgical / Equipment / Other
+    unit: Mapped[str] = mapped_column(String(20))
+    store: Mapped[str] = mapped_column(String(40), default="Central Store")
+    current_stock: Mapped[int] = mapped_column(Integer, default=0)
+    min_level: Mapped[int] = mapped_column(Integer, default=0)
+    max_level: Mapped[int] = mapped_column(Integer, default=0)
+    unit_cost: Mapped[float] = mapped_column(Float, default=0.0)
+    batch_no: Mapped[str | None] = mapped_column(String(40))
+    expiry_date: Mapped[date | None] = mapped_column(Date)
+    consumed_month: Mapped[int] = mapped_column(Integer, default=0)
+    non_moving: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class PurchaseOrder(Base):
+    __tablename__ = "purchase_order"
+
+    po_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    po_number: Mapped[str] = mapped_column(String(30))
+    supplier: Mapped[str] = mapped_column(String(120))
+    order_date: Mapped[date] = mapped_column(Date, default=date.today)
+    status: Mapped[str] = mapped_column(String(24), default="Ordered")  # Ordered / Approved / Partially Received / Delivered
+    value: Mapped[float] = mapped_column(Float, default=0.0)
+
+
 # ------------------------------------------------------------------------------------- Audit (immutable)
 class AuditLog(Base):
     __tablename__ = "audit_log"

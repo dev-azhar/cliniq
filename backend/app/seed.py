@@ -135,6 +135,10 @@ def seed() -> None:
         print(f"  Nurses seeded   : 2 (Priya Sharma, Amit Patel)")
         print(f"  Schedules seeded: Mon-Sun 10:00 AM - 8:00 PM for each doctor")
         print(f"  Stock catalog   : {len(stock)} items")
+
+        # Inventory / supply-chain domain (idempotent).
+        from seed_inventory import seed_inventory
+        seed_inventory(db)
     finally:
         db.close()
 

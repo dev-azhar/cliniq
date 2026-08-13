@@ -65,3 +65,31 @@ export function useOsBilling() {
     staleTime: 15_000,
   });
 }
+
+interface DonutSegment { label: string; value: string; pct: number; color: string }
+
+export interface OsInventory {
+  kpis: {
+    totalItems: number; stockValue: string; purchaseOrders: number;
+    grnPending: number; transfersInTransit: number; suppliers: number;
+  };
+  stockOverview: { total: string; segments: DonutSegment[] };
+  valueByCategory: { total: string; segments: DonutSegment[] };
+  tabCounts: { allItems: number; lowStock: number; outOfStock: number; expiringSoon: number; nonMoving: number };
+  items: { code: string; name: string; category: string; unit: string; current: string; min: string; max: string; status: string; updated: string }[];
+  purchaseOrders: { po: string; supplier: string; date: string; status: string; value: string }[];
+  expiring: { name: string; batch: string; exp: string; qty: string }[];
+  topConsumed: { name: string; qty: string; unit: string }[];
+  stores: { store: string; total: string; inStock: string; low: string; out: string; value: string }[];
+  suppliers: { name: string; otd: string; quality: string; fill: string; rating: number }[];
+  generatedAt: string;
+}
+
+export function useOsInventory() {
+  return useQuery({
+    queryKey: ["os", "inventory"],
+    queryFn: () => fetchJson<OsInventory>("/api/v1/os/inventory"),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+}
