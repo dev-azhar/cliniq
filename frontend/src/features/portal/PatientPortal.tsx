@@ -5,9 +5,12 @@ import {
   Shield, Users, ClipboardList, Sparkles, Settings, HelpCircle, LogOut, Search,
   Bell, MessageSquare, ChevronDown, Clock, MapPin, CalendarPlus, CheckCircle2, Circle,
   TriangleAlert, Video, RefreshCw, Download, Building2, Mic, Phone, Heart, Navigation,
-  Info, ChevronRight, CalendarClock, XCircle, Stethoscope, Plus,
+  Info, ChevronRight, CalendarClock, XCircle, Stethoscope, Plus, Activity, Droplet,
+  Loader2,
 } from "lucide-react";
 import type { ComponentType } from "react";
+import { usePortalSummary, type PortalSummary, type PortalAppointment } from "./portalApi";
+import { getPortalSession, clearPortalSession, portalInitials } from "./portalSession";
 
 const card = "rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_3px_rgba(28,33,51,.05)]";
 
@@ -25,64 +28,6 @@ const NAV = [
   { label: "AI Assistant", icon: Sparkles },
 ];
 
-const STATS = [
-  { icon: Calendar, tint: "#0078d4", title: "Next Appointment", big: "10:00 AM", sub: "Tomorrow", note: "Dr. Ahmed Ali", cta: "View Details" },
-  { icon: Pill, tint: "#16a34a", title: "Active Medications", big: "3", sub: "Medications", cta: "View All" },
-  { icon: FileText, tint: "#8764B8", title: "Reports Ready", big: "2", sub: "Reports", cta: "View Reports" },
-  { icon: CreditCard, tint: "#CA5010", title: "Outstanding Bill", big: "₹ 2,450", sub: "Due Amount", cta: "Pay Now" },
-  { icon: Bell, tint: "#0891b2", title: "Health Reminders", big: "2", sub: "Pending", cta: "View All" },
-];
-
-const JOURNEY = [
-  { label: "Registration", time: "09:15 AM", state: "done" },
-  { label: "Check-In", time: "09:30 AM", state: "done" },
-  { label: "Consultation", time: "10:00 AM", state: "current" },
-  { label: "Lab Tests", time: "", state: "todo" },
-  { label: "Pharmacy", time: "", state: "todo" },
-  { label: "Billing", time: "", state: "todo" },
-  { label: "Follow-up", time: "", state: "todo" },
-];
-
-const LABS = [
-  { test: "HbA1c", date: "May 18, 2026", value: "6.2 %", status: "Normal", tone: "#16a34a" },
-  { test: "Lipid Profile", date: "May 18, 2026", value: "110 mg/dL", status: "Borderline", tone: "#CA5010" },
-  { test: "CBC", date: "May 18, 2026", value: "", status: "Normal", tone: "#16a34a" },
-];
-
-const MEDS = [
-  { name: "Metformin 500 mg", freq: "1 - 0 - 1", when: "After Meal" },
-  { name: "Aspirin 75 mg", freq: "1 - 0 - 0", when: "Morning" },
-  { name: "Atorvastatin 20 mg", freq: "0 - 0 - 1", when: "Night" },
-];
-
-const ALERTS = [
-  { icon: TriangleAlert, tone: "#D13438", title: "Follow-up Due", body: "Cardiology follow-up in 7 days", date: "May 25, 2026" },
-  { icon: TriangleAlert, tone: "#CA5010", title: "BP Monitoring", body: "Please monitor your BP regularly", date: "May 18, 2026" },
-  { icon: Info, tone: "#0078d4", title: "Vaccine Due", body: "Flu vaccine is due", date: "May 30, 2026" },
-];
-
-const QUICK = [
-  { icon: Calendar, label: "Book Appointment" },
-  { icon: Video, label: "Teleconsult" },
-  { icon: RefreshCw, label: "Refill Medicine" },
-  { icon: CreditCard, label: "Pay Bill" },
-  { icon: Download, label: "Download Reports" },
-  { icon: Building2, label: "Find Hospital" },
-];
-
-const TASKS = [
-  { label: "Take Metformin 500 mg", meta: "8:00 AM", done: false },
-  { label: "Health Assessment", meta: "Due on May 25, 2026", done: false },
-  { label: "Pay outstanding bill", meta: "₹ 2,450", done: false },
-];
-
-const FAMILY = [
-  { name: "Ahmed Ahmed", rel: "Self", tone: "#0078d4" },
-  { name: "Fatima Ahmed", rel: "Daughter", tone: "#D6336C" },
-  { name: "Omar Ahmed", rel: "Son", tone: "#16a34a" },
-  { name: "Aisha Ahmed", rel: "Mother", tone: "#8764B8" },
-];
-
 const ASSISTANT_CHIPS = [
   "Explain my latest lab report",
   "Book an appointment",
@@ -91,9 +36,32 @@ const ASSISTANT_CHIPS = [
   "Any health tips for me?",
 ];
 
-function initials(name: string) {
-  const w = name.trim().split(/\s+/);
-  return ((w[0]?.[0] ?? "") + (w[1]?.[0] ?? "")).toUpperCase();
+/* ------------------------------------------------------------------- helpers */
+
+function firstName(name: string) {
+  return name.trim().split(/\s+/)[0] || "there";
+}
+
+function labTone(status: string) {
+  const t = status.toLowerCase();
+  if (t.includes("critical") || t.includes("very")) return "#D13438";
+  if (t.includes("high") || t.includes("low") || t.includes("border") || t.includes("abnormal")) return "#CA5010";
+  if (t.includes("normal")) return "#16a34a";
+  return "#0078d4";
+}
+
+function apptTone(status: string) {
+  const t = status.toLowerCase();
+  if (t.includes("cancel")) return "#D13438";
+  if (t.includes("complete") || t.includes("discharge") || t.includes("checked out")) return "#64748b";
+  if (t.includes("pending") || t.includes("triage") || t.includes("book") || t.includes("schedul")) return "#CA8A04";
+  return "#16a34a";
+}
+
+function riskScore(risk?: string) {
+  if (risk === "High") return 58;
+  if (risk === "Moderate") return 74;
+  return 90;
 }
 
 function NavItem({ icon: Icon, label, active, onClick }: { icon: ComponentType<{ size?: number | string }>; label: string; active?: boolean; onClick?: () => void }) {
@@ -105,73 +73,319 @@ function NavItem({ icon: Icon, label, active, onClick }: { icon: ComponentType<{
   );
 }
 
-function StatCard({ s }: { s: typeof STATS[number] }) {
+function SectionHead({ title, action }: { title: string; action?: string }) {
   return (
-    <div className={`${card} p-3.5`}>
-      <div className="mb-2 flex items-center justify-between">
-        <span className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: `${s.tint}15`, color: s.tint }}><s.icon size={17} /></span>
-        <span className="text-[10.5px] font-semibold text-slate-400">{s.title}</span>
-      </div>
-      <div className="text-[19px] font-extrabold leading-none text-slate-800">{s.big}</div>
-      <div className="mt-0.5 text-[10.5px] text-slate-400">{s.note ?? s.sub}</div>
-      <button type="button" className="mt-2 flex items-center gap-0.5 text-[11px] font-semibold text-[#0078d4]">{s.cta} <ChevronRight size={12} /></button>
+    <div className="mb-2 flex items-center justify-between">
+      <h3 className="text-[13px] font-bold text-slate-800">{title}</h3>
+      {action && <button type="button" className="text-[11px] font-semibold text-[#0078d4]">{action} ›</button>}
     </div>
   );
 }
 
-/* ------------------------------------------------------------ APPOINTMENTS */
+function EmptyState({ icon: Icon, title, sub }: { icon: ComponentType<{ size?: number | string }>; title: string; sub: string }) {
+  return (
+    <div className={`${card} grid place-items-center gap-2 p-10 text-center`}>
+      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Icon size={22} /></span>
+      <div className="text-[13.5px] font-bold text-slate-700">{title}</div>
+      <div className="text-[12px] text-slate-400">{sub}</div>
+    </div>
+  );
+}
 
-const APPT_STATS = [
-  { icon: CalendarClock, tint: "#0078d4", label: "Upcoming", value: "3" },
-  { icon: CheckCircle2, tint: "#16a34a", label: "Completed", value: "24" },
-  { icon: XCircle, tint: "#D13438", label: "Cancelled", value: "2" },
-  { icon: Stethoscope, tint: "#8764B8", label: "This Year", value: "29" },
-];
+function PageHead({ title, sub, cta }: { title: string; sub: string; cta?: { label: string; icon: ComponentType<{ size?: number | string }>; onClick?: () => void } }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="min-w-0 flex-1">
+        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-800">{title}</h1>
+        <p className="text-[13px] text-slate-500">{sub}</p>
+      </div>
+      {cta && (
+        <button type="button" onClick={cta.onClick} className="flex items-center gap-1.5 rounded-xl bg-[#0078d4] px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm">
+          <cta.icon size={16} /> {cta.label}
+        </button>
+      )}
+    </div>
+  );
+}
 
-type Appt = {
-  dr: string; spec: string; init: string; tone: string;
-  date: string; day?: string; time: string; mode: "In-person" | "Video";
-  loc: string; status: string; statusTone: string; queue?: string;
-};
+/* ---------------------------------------------------------------------- HOME */
 
-const UPCOMING_APPTS: Appt[] = [
-  { dr: "Dr. Ahmed Ali", spec: "Cardiologist", init: "AA", tone: "#0c3b63", date: "May 21, 2026", day: "Tomorrow", time: "10:00 AM", mode: "In-person", loc: "OPD Room 203, Main Building", status: "Confirmed", statusTone: "#16a34a", queue: "#6" },
-  { dr: "Dr. Meera Nair", spec: "Endocrinologist", init: "MN", tone: "#8764B8", date: "May 28, 2026", day: "Next Week", time: "11:30 AM", mode: "Video", loc: "Teleconsultation link", status: "Confirmed", statusTone: "#16a34a" },
-  { dr: "Dr. Rajesh Kumar", spec: "General Physician", init: "RK", tone: "#CA5010", date: "Jun 04, 2026", time: "09:15 AM", mode: "In-person", loc: "OPD Room 110, Block B", status: "Pending", statusTone: "#CA8A04" },
-];
+function HomeView({ s, name, go }: { s?: PortalSummary; name: string; go: (label: string) => void }) {
+  const score = riskScore(s?.riskLevel);
+  const scoreTone = score >= 80 ? "#16a34a" : score >= 65 ? "#CA5010" : "#D13438";
+  const nextAppt = s?.appointments.upcoming[0];
+  const labs = s?.labs ?? [];
+  const meds = s?.medications ?? [];
+  const problems = s?.problems ?? [];
 
-const PAST_APPTS: Appt[] = [
-  { dr: "Dr. Ahmed Ali", spec: "Cardiologist", init: "AA", tone: "#0c3b63", date: "May 07, 2026", time: "10:00 AM", mode: "In-person", loc: "Hypertension — stable", status: "Completed", statusTone: "#64748b" },
-  { dr: "Dr. Sara Iqbal", spec: "Dermatologist", init: "SI", tone: "#D6336C", date: "Apr 22, 2026", time: "04:30 PM", mode: "Video", loc: "Eczema — follow-up advised", status: "Completed", statusTone: "#64748b" },
-  { dr: "Dr. Meera Nair", spec: "Endocrinologist", init: "MN", tone: "#8764B8", date: "Apr 03, 2026", time: "11:00 AM", mode: "In-person", loc: "Diabetes review — HbA1c 6.2%", status: "Completed", statusTone: "#64748b" },
-];
+  const stats = [
+    { icon: Calendar, tint: "#0078d4", big: nextAppt ? nextAppt.time : "—", note: nextAppt ? nextAppt.date : "None scheduled", cta: "View", go: "Appointments" },
+    { icon: Pill, tint: "#16a34a", big: String(meds.length), note: "Active medications", cta: "View All", go: "Medications" },
+    { icon: FileText, tint: "#8764B8", big: String(labs.length), note: "Lab reports", cta: "View", go: "Lab Reports" },
+    { icon: CreditCard, tint: "#CA5010", big: s?.billing.outstanding ?? "₹ 0", note: "Outstanding bill", cta: "Pay Now", go: "Billing & Payments" },
+    { icon: Bell, tint: "#0891b2", big: String(problems.length), note: "Health reminders", cta: "View", go: "Health Records" },
+  ];
 
-const SPECIALTIES = ["Cardiology", "Endocrinology", "Dermatology", "General Physician", "Orthopedics", "Neurology"];
+  const alerts = problems.length
+    ? [
+        ...(s && s.abnormalLabs > 0 ? [{ icon: TriangleAlert, tone: "#D13438", title: "Abnormal lab results", body: `${s.abnormalLabs} value(s) out of range`, date: labs[0]?.date?.split(",")[0] ?? "" }] : []),
+        ...problems.slice(0, 3).map((p) => ({ icon: Info, tone: "#CA5010", title: p.name, body: p.onset || "Active problem — monitor", date: "" })),
+      ]
+    : [
+        { icon: TriangleAlert, tone: "#D13438", title: "Follow-up Due", body: "Cardiology follow-up in 7 days", date: "" },
+        { icon: Info, tone: "#0078d4", title: "Vaccine Due", body: "Flu vaccine is due", date: "" },
+      ];
 
-const AVAILABLE_DOCS = [
-  { dr: "Dr. Ahmed Ali", spec: "Cardiologist", init: "AA", tone: "#0c3b63", slot: "Today, 3:00 PM", rating: "4.8" },
-  { dr: "Dr. Fatima Sheikh", spec: "Physician", init: "FS", tone: "#16a34a", slot: "Tomorrow, 10:00 AM", rating: "4.9" },
-  { dr: "Dr. Vikram Rao", spec: "Orthopedic", init: "VR", tone: "#CA5010", slot: "Tomorrow, 5:30 PM", rating: "4.7" },
-];
+  const journeyStatus = (s?.status || "CHECKED_IN").toUpperCase();
+  const jIdx: Record<string, number> = { REGISTERED: 0, CHECKED_IN: 1, TRIAGED: 2, IN_CONSULT: 2, ADMITTED: 2, COMPLETED: 6, DISCHARGED: 6, CHECKED_OUT: 6 };
+  const cur = jIdx[journeyStatus] ?? 2;
+  const journey = ["Registration", "Check-In", "Consultation", "Lab Tests", "Pharmacy", "Billing", "Follow-up"]
+    .map((label, i) => ({ label, state: i < cur ? "done" : i === cur ? "current" : "todo" }));
 
-function ApptCard({ a, past }: { a: Appt; past?: boolean }) {
+  const tasks = [
+    ...meds.slice(0, 1).map((m) => ({ label: `Take ${m.name}`, meta: m.dose || "As prescribed" })),
+    ...(s && s.billing.outstandingRaw > 0 ? [{ label: "Pay outstanding bill", meta: s.billing.outstanding }] : []),
+    ...(nextAppt ? [{ label: `Visit ${nextAppt.dr}`, meta: `${nextAppt.date}, ${nextAppt.time}` }] : []),
+  ];
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
+      <div className="min-w-0 space-y-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-[22px] font-extrabold tracking-tight text-slate-800">Good day, {firstName(name)}! 👋</h1>
+            <p className="text-[13px] text-slate-500">Here's your health summary for today.</p>
+          </div>
+          <div className={`${card} flex items-center gap-3 p-3`}>
+            <div className="flex items-center gap-2">
+              <Heart size={18} style={{ color: scoreTone }} fill={scoreTone} />
+              <div><div className="text-[10px] font-semibold text-slate-400">AI Health Score</div><div className="text-[20px] font-extrabold leading-none text-slate-800">{score} <span className="text-[11px] font-medium text-slate-400">/100</span></div></div>
+            </div>
+            <div className="h-8 w-px bg-black/[0.06]" />
+            <div><div className="text-[12px] font-bold" style={{ color: scoreTone }}>{score >= 80 ? "Great job! 🎉" : score >= 65 ? "Keep going 💪" : "Needs attention"}</div><div className="text-[10.5px] text-slate-400">Based on your records.</div></div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+          {stats.map((st) => (
+            <div key={st.note} className={`${card} p-3.5`}>
+              <div className="mb-2 flex items-center justify-between">
+                <span className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: `${st.tint}15`, color: st.tint }}><st.icon size={17} /></span>
+              </div>
+              <div className="text-[19px] font-extrabold leading-none text-slate-800">{st.big}</div>
+              <div className="mt-0.5 text-[10.5px] text-slate-400">{st.note}</div>
+              <button type="button" onClick={() => go(st.go)} className="mt-2 flex items-center gap-0.5 text-[11px] font-semibold text-[#0078d4]">{st.cta} <ChevronRight size={12} /></button>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+          <div className={`${card} p-4`}>
+            <h3 className="mb-3 text-[13.5px] font-bold text-slate-800">Upcoming Appointment</h3>
+            {nextAppt ? (
+              <>
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[#0c3b63] text-[16px] font-bold text-white">{nextAppt.init}</span>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-[15px] font-bold text-slate-800">{nextAppt.dr} <CheckCircle2 size={14} className="text-[#0078d4]" /></div>
+                      <div className="text-[12px] text-slate-500">{nextAppt.spec}</div>
+                      <div className="mt-1.5 flex gap-1.5">
+                        <span className="rounded-md bg-[rgba(0,120,212,.1)] px-2 py-0.5 text-[10px] font-semibold text-[#0a5aa8]">{nextAppt.visitType}</span>
+                        <span className="rounded-md px-2 py-0.5 text-[10px] font-semibold" style={{ background: `${apptTone(nextAppt.status)}15`, color: apptTone(nextAppt.status) }}>{nextAppt.status}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-1.5 text-[12px] text-slate-600">
+                    <div className="flex items-center gap-2"><Calendar size={13} className="text-slate-400" /> {nextAppt.date}</div>
+                    <div className="flex items-center gap-2"><Clock size={13} className="text-slate-400" /> {nextAppt.time}</div>
+                    <div className="flex items-center gap-2">{nextAppt.mode === "Video" ? <Video size={13} className="text-slate-400" /> : <MapPin size={13} className="text-slate-400" />} {nextAppt.loc}</div>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <button type="button" className="flex items-center justify-center gap-1.5 rounded-xl bg-[#0078d4] py-2.5 text-[12px] font-semibold text-white"><CheckCircle2 size={14} /> Check-In</button>
+                  <button type="button" className="flex items-center justify-center gap-1.5 rounded-xl border border-black/[0.08] py-2.5 text-[12px] font-semibold text-slate-600"><Calendar size={14} /> Reschedule</button>
+                  <button type="button" className="flex items-center justify-center gap-1.5 rounded-xl border border-black/[0.08] py-2.5 text-[12px] font-semibold text-slate-600"><Navigation size={14} /> Directions</button>
+                  <button type="button" className="flex items-center justify-center gap-1.5 rounded-xl border border-black/[0.08] py-2.5 text-[12px] font-semibold text-slate-600"><CalendarPlus size={14} /> Add to Calendar</button>
+                </div>
+              </>
+            ) : (
+              <div className="grid place-items-center gap-2 py-6 text-center">
+                <span className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Calendar size={20} /></span>
+                <div className="text-[12.5px] font-semibold text-slate-600">No upcoming appointments</div>
+                <button type="button" onClick={() => go("Appointments")} className="rounded-xl bg-[#0078d4] px-3 py-1.5 text-[11.5px] font-semibold text-white">Book Appointment</button>
+              </div>
+            )}
+          </div>
+
+          <div className={`${card} p-4`}>
+            <SectionHead title="My Health Journey" action="View All" />
+            <div className="space-y-0">
+              {journey.map((j, i) => (
+                <div key={j.label} className="flex gap-2.5">
+                  <div className="flex flex-col items-center">
+                    {j.state === "done" ? <CheckCircle2 size={18} className="text-[#16a34a]" /> : j.state === "current" ? <span className="grid h-[18px] w-[18px] place-items-center rounded-full border-2 border-[#0078d4]"><span className="h-1.5 w-1.5 rounded-full bg-[#0078d4]" /></span> : <Circle size={18} className="text-slate-300" />}
+                    {i < journey.length - 1 && <span className="my-0.5 h-5 w-px" style={{ background: j.state === "done" ? "#16a34a" : "#e2e8f0" }} />}
+                  </div>
+                  <div className="-mt-0.5 flex flex-1 items-center pb-1">
+                    <span className="text-[12.5px] font-semibold" style={{ color: j.state === "todo" ? "#94a3b8" : "#334155" }}>{j.label}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className={`${card} p-4`}>
+            <SectionHead title="Recent Lab Results" action="View All" />
+            {labs.length ? (
+              <div className="space-y-2">
+                {labs.slice(0, 4).map((l, i) => (
+                  <div key={`${l.test}-${i}`} className="flex items-center justify-between gap-2 border-b border-black/[0.04] pb-2 last:border-0">
+                    <div><div className="text-[12.5px] font-semibold text-slate-700">{l.test}</div><div className="text-[10px] text-slate-400">{l.date}</div></div>
+                    <div className="flex items-center gap-2">{l.value && <span className="text-[11.5px] font-semibold text-slate-600">{l.value}</span>}<span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${labTone(l.status)}15`, color: labTone(l.status) }}>{l.status}</span></div>
+                  </div>
+                ))}
+              </div>
+            ) : <div className="py-4 text-center text-[12px] text-slate-400">No lab results yet.</div>}
+            <button type="button" onClick={() => go("Lab Reports")} className="mt-2 text-[11px] font-semibold text-[#0078d4]">View All Reports ›</button>
+          </div>
+
+          <div className={`${card} p-4`}>
+            <SectionHead title="Active Medications" action="View All" />
+            {meds.length ? (
+              <div className="space-y-2">
+                {meds.slice(0, 4).map((m, i) => (
+                  <div key={`${m.name}-${i}`} className="flex items-center justify-between gap-2 border-b border-black/[0.04] pb-2 last:border-0">
+                    <div className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[rgba(22,163,74,.1)] text-[#16a34a]"><Pill size={13} /></span><span className="text-[12.5px] font-semibold text-slate-700">{m.name}</span></div>
+                    <div className="text-[10.5px] text-slate-400">{m.dose}</div>
+                  </div>
+                ))}
+              </div>
+            ) : <div className="py-4 text-center text-[12px] text-slate-400">No active medications.</div>}
+            <button type="button" onClick={() => go("Medications")} className="mt-2 text-[11px] font-semibold text-[#0078d4]">Refill Medicines ›</button>
+          </div>
+
+          <div className={`${card} p-4`}>
+            <SectionHead title="Health Alerts" action="View All" />
+            <div className="space-y-2">
+              {alerts.map((a, i) => (
+                <div key={`${a.title}-${i}`} className="flex items-start gap-2 border-b border-black/[0.04] pb-2 last:border-0">
+                  <a.icon size={15} className="mt-0.5 shrink-0" style={{ color: a.tone }} />
+                  <div className="min-w-0 flex-1"><div className="text-[12px] font-semibold text-slate-700">{a.title}</div><div className="text-[10.5px] text-slate-500">{a.body}</div></div>
+                  {a.date && <span className="shrink-0 text-[9.5px] text-slate-400">{a.date}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className={`${card} p-4`}>
+            <SectionHead title="Insurance Summary" action="View Details" />
+            <div className="grid grid-cols-2 gap-y-2.5">
+              {[["Policy Number", "HDFX-987654321"], ["Coverage Left", "₹ 3.20 L"], ["Valid Till", "Dec 31, 2026"], ["Claim Status", "Approved"]].map(([k, v]) => (
+                <div key={k}><div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">{k}</div><div className="text-[12px] font-semibold" style={{ color: v === "Approved" ? "#16a34a" : "#334155" }}>{v}</div></div>
+              ))}
+            </div>
+          </div>
+
+          <div className={`${card} p-4`}>
+            <SectionHead title="Upcoming Tasks" action="View All" />
+            {tasks.length ? (
+              <div className="space-y-2">
+                {tasks.map((t, i) => (
+                  <label key={`${t.label}-${i}`} className="flex items-center gap-2.5">
+                    <input type="checkbox" className="h-4 w-4 rounded border-slate-300 accent-[#0078d4]" />
+                    <span className="flex-1 text-[12px] text-slate-600">{t.label}</span>
+                    <span className="text-[10.5px] font-semibold text-slate-400">{t.meta}</span>
+                  </label>
+                ))}
+              </div>
+            ) : <div className="py-4 text-center text-[12px] text-slate-400">You're all caught up 🎉</div>}
+          </div>
+
+          <div className={`${card} p-4`}>
+            <SectionHead title="Health Tips for You" action="View All" />
+            <p className="text-[12px] leading-relaxed text-slate-600">Walk for 30 minutes daily to keep your heart healthy. Drink at least 8 glasses of water every day and take medicines on time.</p>
+          </div>
+        </div>
+      </div>
+
+      <RightRail name={name} go={go} />
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- RIGHT RAIL */
+
+function RightRail({ name, go }: { name: string; go: (label: string) => void }) {
+  const quick = [
+    { icon: Calendar, label: "Book Appointment", go: "Appointments" },
+    { icon: Video, label: "Teleconsult", go: "Appointments" },
+    { icon: RefreshCw, label: "Refill Medicine", go: "Medications" },
+    { icon: CreditCard, label: "Pay Bill", go: "Billing & Payments" },
+    { icon: Download, label: "Download Reports", go: "Lab Reports" },
+    { icon: Building2, label: "Find Hospital", go: "Home" },
+  ];
+  return (
+    <div className="space-y-4">
+      <div className={`${card} flex flex-col p-4`}>
+        <div className="mb-3 flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-xl text-white" style={{ background: "linear-gradient(150deg,#7c3aed,#4f46e5)" }}><Sparkles size={16} /></span><div><div className="text-[13px] font-bold text-slate-800">AI Health Assistant</div><span className="rounded bg-[rgba(124,58,237,.12)] px-1.5 py-0.5 text-[9px] font-bold text-[#7c3aed]">BETA</span></div></div>
+        <div className="mb-3 rounded-xl bg-slate-50 p-3 text-[12px] text-slate-600"><b className="text-slate-700">Hello {firstName(name)}! 👋</b><br />I can help you with</div>
+        <div className="space-y-1.5">
+          {ASSISTANT_CHIPS.map((c) => (
+            <button key={c} type="button" className="w-full rounded-xl border border-black/[0.07] bg-white px-3 py-2 text-left text-[12px] font-medium text-slate-600 hover:border-[#7c3aed]/40 hover:text-[#5b21b6]">{c}</button>
+          ))}
+        </div>
+        <div className="mt-3 flex items-center gap-2 rounded-xl border border-black/[0.08] bg-white px-3 py-2">
+          <input className="w-full bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400" placeholder="Ask anything..." />
+          <button type="button" className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white" style={{ background: "linear-gradient(150deg,#7c3aed,#4f46e5)" }}><Mic size={14} /></button>
+        </div>
+      </div>
+
+      <div className={`${card} p-4`}>
+        <h3 className="mb-3 text-[13px] font-bold text-slate-800">Quick Actions</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {quick.map((q) => (
+            <button key={q.label} type="button" onClick={() => go(q.go)} className="flex flex-col items-center gap-1.5 rounded-xl border border-black/[0.06] bg-slate-50/60 px-1 py-3 text-center hover:border-[#0078d4]/30">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-[rgba(0,120,212,.1)] text-[#0078d4]"><q.icon size={16} /></span>
+              <span className="text-[9.5px] font-semibold leading-tight text-slate-600">{q.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className={`${card} p-4`}>
+        <h3 className="mb-2 text-[13px] font-bold text-slate-800">Need Help?</h3>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[rgba(0,120,212,.1)] text-[#0078d4]"><MessageSquare size={15} /></span><div><div className="text-[12px] font-semibold text-slate-700">Chat with Support</div><div className="text-[10px] text-slate-400">Available 24/7</div></div></div>
+          <div className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[rgba(22,163,74,.1)] text-[#16a34a]"><Phone size={15} /></span><div><div className="text-[12px] font-semibold text-slate-700">Call Us</div><div className="text-[10px] text-slate-400">+91 98765 43210</div></div></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------- APPOINTMENTS */
+
+function ApptCard({ a }: { a: PortalAppointment }) {
+  const past = !a.upcoming;
   return (
     <div className={`${card} p-4`}>
       <div className="flex flex-wrap items-start gap-3">
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-[14px] font-bold text-white" style={{ background: a.tone }}>{a.init}</span>
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-[14px] font-bold text-white" style={{ background: "#0c3b63" }}>{a.init}</span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 text-[14.5px] font-bold text-slate-800">{a.dr} <CheckCircle2 size={13} className="text-[#0078d4]" /></div>
           <div className="text-[11.5px] text-slate-500">{a.spec}</div>
           <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-slate-600">
-            <span className="flex items-center gap-1"><Calendar size={12} className="text-slate-400" /> {a.date}{a.day ? ` (${a.day})` : ""}</span>
+            <span className="flex items-center gap-1"><Calendar size={12} className="text-slate-400" /> {a.date}</span>
             <span className="flex items-center gap-1"><Clock size={12} className="text-slate-400" /> {a.time}</span>
             <span className="flex items-center gap-1">{a.mode === "Video" ? <Video size={12} className="text-slate-400" /> : <MapPin size={12} className="text-slate-400" />} {a.loc}</span>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${a.statusTone}15`, color: a.statusTone }}>{a.status}</span>
-          {a.queue && <span className="text-[10px] text-slate-400">Queue {a.queue}</span>}
-        </div>
+        <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${apptTone(a.status)}15`, color: apptTone(a.status) }}>{a.status}</span>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {past ? (
@@ -195,33 +409,33 @@ function ApptCard({ a, past }: { a: Appt; past?: boolean }) {
   );
 }
 
-function AppointmentsView() {
-  const [tab, setTab] = useState<"Upcoming" | "Past" | "Cancelled">("Upcoming");
-  const list = tab === "Upcoming" ? UPCOMING_APPTS : tab === "Past" ? PAST_APPTS : [];
+function AppointmentsView({ s }: { s?: PortalSummary }) {
+  const [tab, setTab] = useState<"Upcoming" | "Past">("Upcoming");
+  const upcoming = s?.appointments.upcoming ?? [];
+  const past = s?.appointments.past ?? [];
+  const list = tab === "Upcoming" ? upcoming : past;
+  const apptStats = [
+    { icon: CalendarClock, tint: "#0078d4", label: "Upcoming", value: String(upcoming.length) },
+    { icon: CheckCircle2, tint: "#16a34a", label: "Past Visits", value: String(past.length) },
+    { icon: Stethoscope, tint: "#8764B8", label: "Care Team", value: String(s?.careTeam.length ?? 0) },
+    { icon: XCircle, tint: "#D13438", label: "Cancelled", value: "0" },
+  ];
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-[22px] font-extrabold tracking-tight text-slate-800">My Appointments</h1>
-          <p className="text-[13px] text-slate-500">Manage your upcoming visits, teleconsults and follow-ups.</p>
-        </div>
-        <button type="button" className="flex items-center gap-1.5 rounded-xl bg-[#0078d4] px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm"><Plus size={16} /> Book Appointment</button>
-      </div>
-
+      <PageHead title="My Appointments" sub="Manage your visits, teleconsults and follow-ups." cta={{ label: "Book Appointment", icon: Plus }} />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {APPT_STATS.map((s) => (
-          <div key={s.label} className={`${card} flex items-center gap-3 p-3.5`}>
-            <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: `${s.tint}15`, color: s.tint }}><s.icon size={18} /></span>
-            <div><div className="text-[20px] font-extrabold leading-none text-slate-800">{s.value}</div><div className="text-[11px] text-slate-400">{s.label}</div></div>
+        {apptStats.map((st) => (
+          <div key={st.label} className={`${card} flex items-center gap-3 p-3.5`}>
+            <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: `${st.tint}15`, color: st.tint }}><st.icon size={18} /></span>
+            <div><div className="text-[20px] font-extrabold leading-none text-slate-800">{st.value}</div><div className="text-[11px] text-slate-400">{st.label}</div></div>
           </div>
         ))}
       </div>
-
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
         <div className="min-w-0 space-y-4">
           <div className={`${card} flex flex-wrap items-center justify-between gap-3 p-2.5`}>
             <div className="flex gap-1">
-              {(["Upcoming", "Past", "Cancelled"] as const).map((t) => (
+              {(["Upcoming", "Past"] as const).map((t) => (
                 <button key={t} type="button" onClick={() => setTab(t)} className="rounded-xl px-4 py-2 text-[12.5px] font-semibold transition"
                   style={{ background: tab === t ? "rgba(0,120,212,.1)" : "transparent", color: tab === t ? "#0a5aa8" : "#64748b" }}>{t}</button>
               ))}
@@ -230,27 +444,17 @@ function AppointmentsView() {
               <Search size={14} /><input className="w-full bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400" placeholder="Search appointments..." />
             </label>
           </div>
-
-          {list.length === 0 ? (
-            <div className={`${card} grid place-items-center gap-2 p-10 text-center`}>
-              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Calendar size={22} /></span>
-              <div className="text-[13.5px] font-bold text-slate-700">No {tab.toLowerCase()} appointments</div>
-              <div className="text-[12px] text-slate-400">You have no {tab.toLowerCase()} appointments right now.</div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {list.map((a, i) => <ApptCard key={`${a.dr}-${i}`} a={a} past={tab === "Past"} />)}
-            </div>
-          )}
+          {list.length === 0
+            ? <EmptyState icon={Calendar} title={`No ${tab.toLowerCase()} appointments`} sub={`You have no ${tab.toLowerCase()} appointments right now.`} />
+            : <div className="space-y-3">{list.map((a, i) => <ApptCard key={`${a.dr}-${i}`} a={a} />)}</div>}
         </div>
-
         <div className="space-y-4">
           <div className={`${card} p-4`}>
             <h3 className="mb-3 text-[13px] font-bold text-slate-800">Book New Appointment</h3>
             <div className="space-y-2.5">
               <div><div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Specialty</div>
                 <select className="w-full rounded-xl border border-black/[0.08] bg-slate-50 px-3 py-2 text-[12.5px] text-slate-700 outline-none">
-                  {SPECIALTIES.map((s) => <option key={s}>{s}</option>)}
+                  {["Cardiology", "Endocrinology", "Dermatology", "General Physician", "Orthopedics", "Neurology"].map((sp) => <option key={sp}>{sp}</option>)}
                 </select>
               </div>
               <div><div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Preferred Date</div>
@@ -259,26 +463,12 @@ function AppointmentsView() {
               <button type="button" className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#0078d4] py-2.5 text-[12.5px] font-semibold text-white"><Search size={14} /> Find Slots</button>
             </div>
           </div>
-
-          <div className={`${card} p-4`}>
-            <div className="mb-3 flex items-center justify-between"><h3 className="text-[13px] font-bold text-slate-800">Available Doctors</h3><button type="button" className="text-[11px] font-semibold text-[#0078d4]">View All ›</button></div>
-            <div className="space-y-2.5">
-              {AVAILABLE_DOCS.map((d) => (
-                <div key={d.dr} className="flex items-center gap-2.5 border-b border-black/[0.04] pb-2.5 last:border-0 last:pb-0">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white" style={{ background: d.tone }}>{d.init}</span>
-                  <div className="min-w-0 flex-1"><div className="truncate text-[12.5px] font-semibold text-slate-700">{d.dr}</div><div className="text-[10.5px] text-slate-400">{d.spec} · ★ {d.rating}</div><div className="text-[10.5px] font-semibold text-[#16a34a]">{d.slot}</div></div>
-                  <button type="button" className="shrink-0 rounded-lg bg-[rgba(0,120,212,.1)] px-2.5 py-1.5 text-[11px] font-semibold text-[#0078d4]">Book</button>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className={`${card} p-4`}>
             <h3 className="mb-2 text-[13px] font-bold text-slate-800">Reminders</h3>
             <div className="space-y-2 text-[11.5px] text-slate-600">
-              <div className="flex items-start gap-2"><Bell size={14} className="mt-0.5 text-[#0078d4]" /> Arrive 15 minutes early for check-in and paperwork.</div>
+              <div className="flex items-start gap-2"><Bell size={14} className="mt-0.5 text-[#0078d4]" /> Arrive 15 minutes early for check-in.</div>
               <div className="flex items-start gap-2"><FileText size={14} className="mt-0.5 text-[#16a34a]" /> Carry your previous reports and prescriptions.</div>
-              <div className="flex items-start gap-2"><Shield size={14} className="mt-0.5 text-[#8764B8]" /> Keep your insurance card handy for cashless billing.</div>
+              <div className="flex items-start gap-2"><Shield size={14} className="mt-0.5 text-[#8764B8]" /> Keep your insurance card handy.</div>
             </div>
           </div>
         </div>
@@ -286,6 +476,204 @@ function AppointmentsView() {
     </div>
   );
 }
+
+/* ---------------------------------------------------------------- LAB REPORTS */
+
+function LabReportsView({ s }: { s?: PortalSummary }) {
+  const labs = s?.labs ?? [];
+  return (
+    <div className="space-y-4">
+      <PageHead title="Lab Reports" sub="Your test results with reference ranges and trends." cta={{ label: "Download All", icon: Download }} />
+      {labs.length === 0 ? (
+        <EmptyState icon={FlaskConical} title="No lab reports" sub="Your lab results will appear here once available." />
+      ) : (
+        <div className={`${card} overflow-hidden`}>
+          <div className="grid grid-cols-[1.4fr_1fr_1fr_0.8fr_1.2fr] gap-2 border-b border-black/[0.06] bg-slate-50 px-4 py-2.5 text-[10.5px] font-bold uppercase tracking-wide text-slate-400">
+            <span>Test</span><span>Result</span><span>Reference</span><span>Status</span><span>Date</span>
+          </div>
+          {labs.map((l, i) => (
+            <div key={`${l.test}-${i}`} className="grid grid-cols-[1.4fr_1fr_1fr_0.8fr_1.2fr] items-center gap-2 border-b border-black/[0.04] px-4 py-3 text-[12px] last:border-0">
+              <span className="font-semibold text-slate-700">{l.test}</span>
+              <span className="text-slate-600">{l.value || "—"}</span>
+              <span className="text-slate-400">{l.range}</span>
+              <span><span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${labTone(l.status)}15`, color: labTone(l.status) }}>{l.status}</span></span>
+              <span className="text-slate-400">{l.date}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* --------------------------------------------------------------- MEDICATIONS */
+
+function MedicationsView({ s }: { s?: PortalSummary }) {
+  const meds = s?.medications ?? [];
+  return (
+    <div className="space-y-4">
+      <PageHead title="Medications" sub="Your active prescriptions and refill status." cta={{ label: "Request Refill", icon: RefreshCw }} />
+      {meds.length === 0 ? (
+        <EmptyState icon={Pill} title="No active medications" sub="Prescribed medicines will show up here." />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {meds.map((m, i) => (
+            <div key={`${m.name}-${i}`} className={`${card} p-4`}>
+              <div className="flex items-start gap-3">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[rgba(22,163,74,.1)] text-[#16a34a]"><Pill size={19} /></span>
+                <div className="min-w-0">
+                  <div className="text-[13.5px] font-bold text-slate-800">{m.name}</div>
+                  <div className="text-[11.5px] text-slate-500">{m.dose || "As prescribed"}</div>
+                  <span className="mt-1.5 inline-block rounded-full bg-[rgba(22,163,74,.12)] px-2 py-0.5 text-[10px] font-bold text-[#16a34a]">Active</span>
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button type="button" className="flex-1 rounded-xl bg-[#0078d4] py-2 text-[11.5px] font-semibold text-white">Refill</button>
+                <button type="button" className="flex-1 rounded-xl border border-black/[0.08] py-2 text-[11.5px] font-semibold text-slate-600">Set Reminder</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ RADIOLOGY */
+
+function RadiologyView({ s }: { s?: PortalSummary }) {
+  const imaging = s?.imaging ?? [];
+  return (
+    <div className="space-y-4">
+      <PageHead title="Radiology" sub="Imaging studies — scans, X-rays and reports." />
+      {imaging.length === 0 ? (
+        <EmptyState icon={ScanLine} title="No imaging studies" sub="Your radiology studies will appear here." />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {imaging.map((im, i) => (
+            <div key={`${im.name}-${i}`} className={`${card} p-4`}>
+              <div className="flex items-start gap-3">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[rgba(135,100,184,.12)] text-[#8764B8]"><ScanLine size={19} /></span>
+                <div className="min-w-0">
+                  <div className="truncate text-[13.5px] font-bold text-slate-800">{im.name}</div>
+                  <div className="text-[11.5px] text-slate-500">{im.type}</div>
+                  <div className="text-[10.5px] text-slate-400">{im.date}</div>
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button type="button" className="flex-1 rounded-xl bg-[#0078d4] py-2 text-[11.5px] font-semibold text-white">View Study</button>
+                {im.uri && <a href={im.uri} target="_blank" rel="noreferrer" className="flex-1 rounded-xl border border-black/[0.08] py-2 text-center text-[11.5px] font-semibold text-slate-600">Download</a>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------- HEALTH RECORDS */
+
+function HealthRecordsView({ s }: { s?: PortalSummary }) {
+  const problems = s?.problems ?? [];
+  const allergies = s?.allergies ?? [];
+  const documents = s?.documents ?? [];
+  const notes = s?.notes ?? [];
+  const v = s?.vitals;
+  return (
+    <div className="space-y-4">
+      <PageHead title="Health Records" sub="Your problems, allergies, vitals and documents." />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className={`${card} p-4`}>
+          <SectionHead title="Vitals" />
+          {v && (v.bp || v.hr) ? (
+            <div className="grid grid-cols-2 gap-3">
+              {[["BP", v.bp], ["Heart Rate", v.hr ? `${v.hr} bpm` : null], ["SpO₂", v.spo2 ? `${v.spo2}%` : null], ["Temp", v.temp ? `${v.temp}°` : null]].map(([k, val]) => (
+                <div key={k} className="rounded-xl bg-slate-50 p-2.5"><div className="text-[10px] font-semibold uppercase text-slate-400">{k}</div><div className="text-[15px] font-bold text-slate-800">{val ?? "—"}</div></div>
+              ))}
+            </div>
+          ) : <div className="flex items-center gap-2 py-3 text-[12px] text-slate-400"><Activity size={14} /> No vitals recorded.</div>}
+        </div>
+        <div className={`${card} p-4`}>
+          <SectionHead title="Problems" />
+          {problems.length ? <ul className="space-y-2">{problems.map((p, i) => (
+            <li key={`${p.name}-${i}`} className="flex items-start gap-2 text-[12.5px] text-slate-700"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#CA5010]" /><div><div className="font-semibold">{p.name}</div>{p.onset && <div className="text-[10.5px] text-slate-400">{p.onset}</div>}</div></li>
+          ))}</ul> : <div className="py-3 text-[12px] text-slate-400">No active problems.</div>}
+        </div>
+        <div className={`${card} p-4`}>
+          <SectionHead title="Allergies" />
+          {allergies.length ? <div className="flex flex-wrap gap-2">{allergies.map((a, i) => (
+            <span key={`${a.substance}-${i}`} className="rounded-full bg-[rgba(209,52,56,.1)] px-2.5 py-1 text-[11px] font-semibold text-[#D13438]"><Droplet size={11} className="mr-1 inline" />{a.substance}{a.severity ? ` · ${a.severity}` : ""}</span>
+          ))}</div> : <div className="py-3 text-[12px] text-slate-400">No known allergies.</div>}
+        </div>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className={`${card} p-4`}>
+          <SectionHead title="Clinical Notes" />
+          {notes.length ? <div className="space-y-2.5">{notes.slice(0, 5).map((n, i) => (
+            <div key={i} className="border-b border-black/[0.04] pb-2.5 last:border-0"><div className="flex items-center justify-between"><span className="text-[12.5px] font-semibold text-slate-700">{n.kind}</span><span className="text-[10px] text-slate-400">{n.date}</span></div><div className="text-[11.5px] text-slate-500">{n.excerpt}</div><div className="mt-0.5 text-[10px] text-slate-400">— {n.author}</div></div>
+          ))}</div> : <div className="py-3 text-[12px] text-slate-400">No clinical notes.</div>}
+        </div>
+        <div className={`${card} p-4`}>
+          <SectionHead title="Documents" />
+          {documents.length ? <div className="space-y-2">{documents.slice(0, 8).map((d, i) => (
+            <div key={i} className="flex items-center gap-2.5 border-b border-black/[0.04] pb-2 last:border-0">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[rgba(0,120,212,.1)] text-[#0078d4]"><FileText size={14} /></span>
+              <div className="min-w-0 flex-1"><div className="truncate text-[12.5px] font-semibold text-slate-700">{d.name}</div><div className="text-[10px] text-slate-400">{d.category} · {d.date}</div></div>
+              {d.uri ? <a href={d.uri} target="_blank" rel="noreferrer" className="shrink-0 text-[11px] font-semibold text-[#0078d4]">Open</a> : <span className="shrink-0 text-[11px] text-slate-300">—</span>}
+            </div>
+          ))}</div> : <div className="py-3 text-[12px] text-slate-400">No documents.</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- BILLING */
+
+function BillingView({ s }: { s?: PortalSummary }) {
+  const billing = s?.billing;
+  const invoices = billing?.invoices ?? [];
+  return (
+    <div className="space-y-4">
+      <PageHead title="Billing & Payments" sub="Your invoices, balances and payment history." cta={{ label: "Pay Now", icon: CreditCard }} />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className={`${card} p-4`}>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Outstanding</div>
+          <div className="mt-1 text-[24px] font-extrabold text-[#CA5010]">{billing?.outstanding ?? "₹ 0"}</div>
+        </div>
+        <div className={`${card} p-4`}>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Invoices</div>
+          <div className="mt-1 text-[24px] font-extrabold text-slate-800">{invoices.length}</div>
+        </div>
+        <div className={`${card} p-4`}>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Insurance</div>
+          <div className="mt-1 text-[15px] font-bold text-[#16a34a]">Cashless active</div>
+        </div>
+      </div>
+      {invoices.length === 0 ? (
+        <EmptyState icon={CreditCard} title="No invoices" sub="Your billing history will appear here." />
+      ) : (
+        <div className={`${card} overflow-hidden`}>
+          <div className="grid grid-cols-[1fr_1.2fr_1fr_1fr_0.9fr] gap-2 border-b border-black/[0.06] bg-slate-50 px-4 py-2.5 text-[10.5px] font-bold uppercase tracking-wide text-slate-400">
+            <span>Invoice</span><span>Date</span><span>Amount</span><span>Balance</span><span>Status</span>
+          </div>
+          {invoices.map((inv, i) => (
+            <div key={i} className="grid grid-cols-[1fr_1.2fr_1fr_1fr_0.9fr] items-center gap-2 border-b border-black/[0.04] px-4 py-3 text-[12px] last:border-0">
+              <span className="font-semibold text-slate-700">{inv.invoice}</span>
+              <span className="text-slate-400">{inv.date}</span>
+              <span className="text-slate-600">{inv.gross}</span>
+              <span className="font-semibold text-slate-700">{inv.balance}</span>
+              <span><span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: apptTone(inv.status) + "15", color: apptTone(inv.status) }}>{inv.status}</span></span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------- PLACEHOLDER */
 
 function Placeholder({ label, onHome }: { label: string; onHome: () => void }) {
   return (
@@ -300,265 +688,66 @@ function Placeholder({ label, onHome }: { label: string; onHome: () => void }) {
   );
 }
 
+/* -------------------------------------------------------------------- SHELL */
+
 export default function PatientPortal() {
   const navigate = useNavigate();
   const [active, setActive] = useState("Home");
+  const { data: s, isLoading, isError } = usePortalSummary();
+  const session = getPortalSession();
+  const name = session?.name ?? s?.name ?? "Patient";
+  const mrn = session?.mrn ?? s?.mrn ?? "—";
+
+  const logout = () => { clearPortalSession(); navigate("/os/login"); };
+
+  const content = (() => {
+    if (isLoading && !s) return <div className="grid min-h-[60vh] place-items-center text-slate-400"><Loader2 className="animate-spin" size={28} /></div>;
+    switch (active) {
+      case "Home": return <HomeView s={s} name={name} go={setActive} />;
+      case "Appointments": return <AppointmentsView s={s} />;
+      case "Lab Reports": return <LabReportsView s={s} />;
+      case "Medications": return <MedicationsView s={s} />;
+      case "Radiology": return <RadiologyView s={s} />;
+      case "Health Records": return <HealthRecordsView s={s} />;
+      case "Billing & Payments": return <BillingView s={s} />;
+      default: return <Placeholder label={active} onHome={() => setActive("Home")} />;
+    }
+  })();
+
   return (
     <div className="flex min-h-screen text-slate-800" style={{ fontFamily: '"Segoe UI Variable Text","Segoe UI",Inter,system-ui,sans-serif', background: "#f5f7fb" }}>
-      {/* ---------------------------------------------------------- SIDEBAR */}
       <aside className="hidden w-[240px] shrink-0 flex-col border-r border-black/[0.06] bg-white px-3 py-4 lg:flex">
         <div className="mb-4 flex items-center gap-2.5 px-2">
           <span className="grid h-10 w-10 place-items-center rounded-xl text-white" style={{ background: "linear-gradient(150deg,#3a96e0,#0078d4)" }}><HeartPulse size={20} /></span>
-          <div className="leading-tight"><div className="text-[17px] font-extrabold text-[#0c3b63]">ClinIQ</div><div className="text-[10px] text-slate-400">Smart Hospital OS</div></div>
+          <div className="leading-tight"><div className="text-[17px] font-extrabold text-[#0c3b63]">ClinIQ</div><div className="text-[10px] text-slate-400">Patient Portal</div></div>
         </div>
         <div className="flex-1 space-y-0.5 overflow-y-auto">
           {NAV.map((n) => <NavItem key={n.label} icon={n.icon} label={n.label} active={active === n.label} onClick={() => setActive(n.label)} />)}
           <div className="my-2 h-px bg-black/[0.06]" />
-          <NavItem icon={Settings} label="Settings" onClick={() => setActive("Settings")} />
-          <NavItem icon={HelpCircle} label="Help & Support" onClick={() => setActive("Help & Support")} />
-          <NavItem icon={LogOut} label="Logout" onClick={() => navigate("/os/login")} />
-        </div>
-        <div className="mt-3 rounded-2xl bg-[linear-gradient(160deg,#eaf2fb,#f4f8fd)] p-3">
-          <div className="text-[12px] font-bold text-[#0c3b63]">Book appointments on the go!</div>
-          <div className="mt-0.5 text-[10px] text-slate-500">Download the ClinIQ App</div>
-          <div className="mt-2 flex gap-1.5">
-            <span className="rounded-md bg-black px-2 py-1 text-[8px] font-semibold text-white">App Store</span>
-            <span className="rounded-md bg-black px-2 py-1 text-[8px] font-semibold text-white">Google Play</span>
-          </div>
+          <NavItem icon={Settings} label="Settings" active={active === "Settings"} onClick={() => setActive("Settings")} />
+          <NavItem icon={HelpCircle} label="Help & Support" active={active === "Help & Support"} onClick={() => setActive("Help & Support")} />
+          <NavItem icon={LogOut} label="Logout" onClick={logout} />
         </div>
       </aside>
 
-      {/* ------------------------------------------------------------- MAIN */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* top bar */}
         <header className="flex h-16 shrink-0 items-center gap-3 border-b border-black/[0.06] bg-white px-5">
           <label className="flex h-10 max-w-[440px] flex-1 items-center gap-2 rounded-xl border border-black/[0.08] bg-slate-50 px-3.5 text-slate-400">
-            <Search size={16} /><input className="w-full bg-transparent text-[13px] text-slate-700 outline-none placeholder:text-slate-400" placeholder="Search doctors, hospitals, specialties..." />
+            <Search size={16} /><input className="w-full bg-transparent text-[13px] text-slate-700 outline-none placeholder:text-slate-400" placeholder="Search doctors, records, reports..." />
           </label>
           <div className="ml-auto flex items-center gap-2.5">
-            <button type="button" className="relative grid h-10 w-10 place-items-center rounded-xl text-slate-500 hover:bg-slate-100"><Bell size={19} /><span className="absolute right-1.5 top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[#D13438] px-1 text-[8px] font-bold text-white">3</span></button>
+            {isError && <span className="rounded-lg bg-[rgba(202,80,16,.1)] px-2 py-1 text-[10.5px] font-semibold text-[#CA5010]">Offline — showing cached view</span>}
+            <button type="button" className="relative grid h-10 w-10 place-items-center rounded-xl text-slate-500 hover:bg-slate-100"><Bell size={19} /><span className="absolute right-1.5 top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[#D13438] px-1 text-[8px] font-bold text-white">{s?.problems.length ?? 0}</span></button>
             <button type="button" className="grid h-10 w-10 place-items-center rounded-xl text-slate-500 hover:bg-slate-100"><MessageSquare size={19} /></button>
             <button type="button" className="flex items-center gap-2 rounded-xl py-1 pl-1 pr-2 hover:bg-slate-100">
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-[#0c3b63] text-[12px] font-bold text-white">SA</span>
-              <span className="hidden text-left leading-tight sm:block"><span className="block text-[13px] font-bold text-slate-700">Sarah Ahmed</span><span className="block text-[10px] text-slate-400">MRN: CLN-00012345</span></span>
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-[#0c3b63] text-[12px] font-bold text-white">{portalInitials(name)}</span>
+              <span className="hidden text-left leading-tight sm:block"><span className="block text-[13px] font-bold text-slate-700">{name}</span><span className="block text-[10px] text-slate-400">MRN: {mrn}</span></span>
               <ChevronDown size={15} className="text-slate-400" />
             </button>
           </div>
         </header>
 
-        {/* content */}
-        <main className="flex-1 overflow-y-auto p-5">
-          {active === "Home" && (
-          <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
-            {/* -------------------------------------------------- LEFT MAIN */}
-            <div className="min-w-0 space-y-4">
-              {/* greeting + health score banner */}
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-[22px] font-extrabold tracking-tight text-slate-800">Good Morning, Sarah! 👋</h1>
-                  <p className="text-[13px] text-slate-500">Here's your health summary for today.</p>
-                </div>
-                <div className={`${card} flex items-center gap-3 p-3`}>
-                  <div className="flex items-center gap-2">
-                    <Heart size={18} className="text-[#16a34a]" fill="#16a34a" />
-                    <div><div className="text-[10px] font-semibold text-slate-400">AI Health Score</div><div className="text-[20px] font-extrabold leading-none text-slate-800">89 <span className="text-[11px] font-medium text-slate-400">/100</span></div></div>
-                  </div>
-                  <div className="h-8 w-px bg-black/[0.06]" />
-                  <div><div className="text-[12px] font-bold text-[#16a34a]">Great Job! 🎉</div><div className="text-[10.5px] text-slate-400">You are doing well.</div><button type="button" className="text-[10.5px] font-semibold text-[#0078d4]">View Details ›</button></div>
-                </div>
-              </div>
-
-              {/* stat tiles */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-                {STATS.map((s) => <StatCard key={s.title} s={s} />)}
-              </div>
-
-              {/* upcoming appointment + journey */}
-              <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-                <div className={`${card} p-4`}>
-                  <h3 className="mb-3 text-[13.5px] font-bold text-slate-800">Upcoming Appointment</h3>
-                  <div className="flex flex-wrap gap-4">
-                    <div className="flex items-center gap-3">
-                      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[#0c3b63] text-[16px] font-bold text-white">AA</span>
-                      <div>
-                        <div className="flex items-center gap-1.5 text-[15px] font-bold text-slate-800">Dr. Ahmed Ali <CheckCircle2 size={14} className="text-[#0078d4]" /></div>
-                        <div className="text-[12px] text-slate-500">Cardiologist</div>
-                        <div className="text-[10.5px] text-slate-400">MBBS, MD, DM Cardiology</div>
-                        <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-[#CA8A04]">★ 4.8 <span className="font-normal text-slate-400">(512 reviews)</span></div>
-                        <div className="mt-1.5 flex gap-1.5">
-                          <span className="rounded-md bg-[rgba(0,120,212,.1)] px-2 py-0.5 text-[10px] font-semibold text-[#0a5aa8]">OPD Visit</span>
-                          <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">Follow-up</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex-1 space-y-1.5 text-[12px] text-slate-600">
-                      <div className="flex items-center gap-2"><Calendar size={13} className="text-slate-400" /> May 21, 2026 (Tomorrow)</div>
-                      <div className="flex items-center gap-2"><Clock size={13} className="text-slate-400" /> 10:00 AM</div>
-                      <div className="flex items-center gap-2"><MapPin size={13} className="text-slate-400" /> OPD Room 203, Main Building</div>
-                      <div className="flex items-center gap-2"><Users size={13} className="text-slate-400" /> Your position in queue: #6</div>
-                      <div className="flex items-center gap-2 text-[#0078d4]"><Clock size={13} /> Estimated wait time: 15 mins</div>
-                    </div>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <button type="button" className="flex items-center justify-center gap-1.5 rounded-xl bg-[#0078d4] py-2.5 text-[12px] font-semibold text-white"><CheckCircle2 size={14} /> Check-In</button>
-                    <button type="button" className="flex items-center justify-center gap-1.5 rounded-xl border border-black/[0.08] py-2.5 text-[12px] font-semibold text-slate-600"><Calendar size={14} /> Reschedule</button>
-                    <button type="button" className="flex items-center justify-center gap-1.5 rounded-xl border border-black/[0.08] py-2.5 text-[12px] font-semibold text-slate-600"><Navigation size={14} /> Directions</button>
-                    <button type="button" className="flex items-center justify-center gap-1.5 rounded-xl border border-black/[0.08] py-2.5 text-[12px] font-semibold text-slate-600"><CalendarPlus size={14} /> Add to Calendar</button>
-                  </div>
-                </div>
-
-                <div className={`${card} p-4`}>
-                  <div className="mb-3 flex items-center justify-between"><h3 className="text-[13.5px] font-bold text-slate-800">My Health Journey</h3><button type="button" className="text-[11px] font-semibold text-[#0078d4]">View All ›</button></div>
-                  <div className="space-y-0">
-                    {JOURNEY.map((j, i) => (
-                      <div key={j.label} className="flex gap-2.5">
-                        <div className="flex flex-col items-center">
-                          {j.state === "done" ? <CheckCircle2 size={18} className="text-[#16a34a]" /> : j.state === "current" ? <span className="grid h-[18px] w-[18px] place-items-center rounded-full border-2 border-[#0078d4]"><span className="h-1.5 w-1.5 rounded-full bg-[#0078d4]" /></span> : <Circle size={18} className="text-slate-300" />}
-                          {i < JOURNEY.length - 1 && <span className="my-0.5 h-5 w-px" style={{ background: j.state === "done" ? "#16a34a" : "#e2e8f0" }} />}
-                        </div>
-                        <div className="-mt-0.5 flex flex-1 items-center justify-between pb-1">
-                          <span className="text-[12.5px] font-semibold" style={{ color: j.state === "todo" ? "#94a3b8" : "#334155" }}>{j.label}</span>
-                          {j.time && <span className="text-[10.5px] text-slate-400">{j.time}</span>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <button type="button" className="mt-2 text-[11px] font-semibold text-[#0078d4]">See full journey ›</button>
-                </div>
-              </div>
-
-              {/* labs / meds / alerts */}
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <div className={`${card} p-4`}>
-                  <div className="mb-2 flex items-center justify-between"><h3 className="text-[13px] font-bold text-slate-800">Recent Lab Results</h3><button type="button" className="text-[11px] font-semibold text-[#0078d4]">View All ›</button></div>
-                  <div className="space-y-2">
-                    {LABS.map((l) => (
-                      <div key={l.test} className="flex items-center justify-between gap-2 border-b border-black/[0.04] pb-2 last:border-0">
-                        <div><div className="text-[12.5px] font-semibold text-slate-700">{l.test}</div><div className="text-[10px] text-slate-400">{l.date}</div></div>
-                        <div className="flex items-center gap-2">{l.value && <span className="text-[11.5px] font-semibold text-slate-600">{l.value}</span>}<span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${l.tone}15`, color: l.tone }}>{l.status}</span></div>
-                      </div>
-                    ))}
-                  </div>
-                  <button type="button" className="mt-2 text-[11px] font-semibold text-[#0078d4]">View All Reports ›</button>
-                </div>
-
-                <div className={`${card} p-4`}>
-                  <div className="mb-2 flex items-center justify-between"><h3 className="text-[13px] font-bold text-slate-800">Active Medications</h3><button type="button" className="text-[11px] font-semibold text-[#0078d4]">View All ›</button></div>
-                  <div className="space-y-2">
-                    {MEDS.map((m) => (
-                      <div key={m.name} className="flex items-center justify-between gap-2 border-b border-black/[0.04] pb-2 last:border-0">
-                        <div className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[rgba(22,163,74,.1)] text-[#16a34a]"><Pill size={13} /></span><span className="text-[12.5px] font-semibold text-slate-700">{m.name}</span></div>
-                        <div className="text-right"><div className="text-[11px] font-bold text-slate-600" style={{ fontVariantNumeric: "tabular-nums" }}>{m.freq}</div><div className="text-[10px] text-slate-400">{m.when}</div></div>
-                      </div>
-                    ))}
-                  </div>
-                  <button type="button" className="mt-2 text-[11px] font-semibold text-[#0078d4]">Refill Medicines ›</button>
-                </div>
-
-                <div className={`${card} p-4`}>
-                  <div className="mb-2 flex items-center justify-between"><h3 className="text-[13px] font-bold text-slate-800">Health Alerts</h3><button type="button" className="text-[11px] font-semibold text-[#0078d4]">View All ›</button></div>
-                  <div className="space-y-2">
-                    {ALERTS.map((a) => (
-                      <div key={a.title} className="flex items-start gap-2 border-b border-black/[0.04] pb-2 last:border-0">
-                        <a.icon size={15} className="mt-0.5 shrink-0" style={{ color: a.tone }} />
-                        <div className="min-w-0 flex-1"><div className="text-[12px] font-semibold text-slate-700">{a.title}</div><div className="text-[10.5px] text-slate-500">{a.body}</div></div>
-                        <span className="shrink-0 text-[9.5px] text-slate-400">{a.date}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* insurance / tasks / tips */}
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <div className={`${card} p-4`}>
-                  <div className="mb-2 flex items-center justify-between"><h3 className="text-[13px] font-bold text-slate-800">Insurance Summary</h3><button type="button" className="text-[11px] font-semibold text-[#0078d4]">View Details ›</button></div>
-                  <div className="grid grid-cols-2 gap-y-2.5">
-                    {[["Policy Number", "HDFX-987654321"], ["Coverage Left", "₹ 3.20 L"], ["Valid Till", "Dec 31, 2026"], ["Claim Status", "Approved"]].map(([k, v]) => (
-                      <div key={k}><div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">{k}</div><div className="text-[12px] font-semibold" style={{ color: v === "Approved" ? "#16a34a" : "#334155" }}>{v}</div></div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className={`${card} p-4`}>
-                  <div className="mb-2 flex items-center justify-between"><h3 className="text-[13px] font-bold text-slate-800">Upcoming Tasks</h3><button type="button" className="text-[11px] font-semibold text-[#0078d4]">View All ›</button></div>
-                  <div className="space-y-2">
-                    {TASKS.map((t) => (
-                      <label key={t.label} className="flex items-center gap-2.5">
-                        <input type="checkbox" className="h-4 w-4 rounded border-slate-300 accent-[#0078d4]" />
-                        <span className="flex-1 text-[12px] text-slate-600">{t.label}</span>
-                        <span className="text-[10.5px] font-semibold text-slate-400">{t.meta}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className={`${card} overflow-hidden p-4`}>
-                  <div className="mb-2 flex items-center justify-between"><h3 className="text-[13px] font-bold text-slate-800">Health Tips for You</h3><button type="button" className="text-[11px] font-semibold text-[#0078d4]">View All ›</button></div>
-                  <p className="text-[12px] leading-relaxed text-slate-600">Walk for 30 minutes daily to keep your heart healthy. Drink at least 8 glasses of water every day.</p>
-                  <button type="button" className="mt-2 text-[11px] font-semibold text-[#0078d4]">More Tips ›</button>
-                </div>
-              </div>
-            </div>
-
-            {/* -------------------------------------------------- RIGHT RAIL */}
-            <div className="space-y-4">
-              {/* AI Health Assistant */}
-              <div className={`${card} flex flex-col p-4`}>
-                <div className="mb-3 flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-xl text-white" style={{ background: "linear-gradient(150deg,#7c3aed,#4f46e5)" }}><Sparkles size={16} /></span><div><div className="text-[13px] font-bold text-slate-800">AI Health Assistant</div><span className="rounded bg-[rgba(124,58,237,.12)] px-1.5 py-0.5 text-[9px] font-bold text-[#7c3aed]">BETA</span></div></div>
-                <div className="mb-3 rounded-xl bg-slate-50 p-3 text-[12px] text-slate-600"><b className="text-slate-700">Hello Sarah! 👋</b><br />I can help you with</div>
-                <div className="space-y-1.5">
-                  {ASSISTANT_CHIPS.map((c) => (
-                    <button key={c} type="button" className="w-full rounded-xl border border-black/[0.07] bg-white px-3 py-2 text-left text-[12px] font-medium text-slate-600 hover:border-[#7c3aed]/40 hover:text-[#5b21b6]">{c}</button>
-                  ))}
-                </div>
-                <div className="mt-3 flex items-center gap-2 rounded-xl border border-black/[0.08] bg-white px-3 py-2">
-                  <input className="w-full bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400" placeholder="Ask anything..." />
-                  <button type="button" className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white" style={{ background: "linear-gradient(150deg,#7c3aed,#4f46e5)" }}><Mic size={14} /></button>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className={`${card} p-4`}>
-                <h3 className="mb-3 text-[13px] font-bold text-slate-800">Quick Actions</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {QUICK.map((q) => (
-                    <button key={q.label} type="button" className="flex flex-col items-center gap-1.5 rounded-xl border border-black/[0.06] bg-slate-50/60 px-1 py-3 text-center hover:border-[#0078d4]/30">
-                      <span className="grid h-8 w-8 place-items-center rounded-lg bg-[rgba(0,120,212,.1)] text-[#0078d4]"><q.icon size={16} /></span>
-                      <span className="text-[9.5px] font-semibold leading-tight text-slate-600">{q.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Family Members */}
-              <div className={`${card} p-4`}>
-                <div className="mb-3 flex items-center justify-between"><h3 className="text-[13px] font-bold text-slate-800">Family Members</h3><button type="button" className="text-[11px] font-semibold text-[#0078d4]">View All ›</button></div>
-                <div className="space-y-2.5">
-                  {FAMILY.map((f) => (
-                    <div key={f.name} className="flex items-center gap-2.5">
-                      <span className="grid h-8 w-8 place-items-center rounded-full text-[11px] font-bold text-white" style={{ background: f.tone }}>{initials(f.name)}</span>
-                      <span className="flex-1 text-[12.5px] font-semibold text-slate-700">{f.name}</span>
-                      <span className="text-[10.5px] text-slate-400">{f.rel}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* support */}
-              <div className={`${card} p-4`}>
-                <h3 className="mb-2 text-[13px] font-bold text-slate-800">Need Help?</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[rgba(0,120,212,.1)] text-[#0078d4]"><MessageSquare size={15} /></span><div><div className="text-[12px] font-semibold text-slate-700">Chat with Support</div><div className="text-[10px] text-slate-400">Available 24/7</div></div></div>
-                  <div className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[rgba(22,163,74,.1)] text-[#16a34a]"><Phone size={15} /></span><div><div className="text-[12px] font-semibold text-slate-700">Call Us</div><div className="text-[10px] text-slate-400">+91 98765 43210</div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          )}
-          {active === "Appointments" && <AppointmentsView />}
-          {active !== "Home" && active !== "Appointments" && <Placeholder label={active} onHome={() => setActive("Home")} />}
-        </main>
+        <main className="flex-1 overflow-y-auto p-5">{content}</main>
       </div>
     </div>
   );

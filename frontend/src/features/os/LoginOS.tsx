@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { osLoginRequest, setOsSession } from "./osSession";
+import { portalLoginRequest, setPortalSession } from "../portal/portalSession";
 
 const ROLES: { label: string; icon: ComponentType<{ size?: number | string }> }[] = [
   { label: "Doctor", icon: Stethoscope },
@@ -70,12 +71,20 @@ export default function LoginOS() {
 
   const signIn = async (creds: { username: string; password: string; role: string }) => {
     setError(null);
+    setLoading(true);
     // Patients land on the patient portal (separate from the staff OS console).
     if (creds.role === "Patient") {
-      navigate("/portal");
+      try {
+        const session = await portalLoginRequest(creds);
+        setPortalSession(session);
+        navigate("/portal");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Sign-in failed. Please try again.");
+      } finally {
+        setLoading(false);
+      }
       return;
     }
-    setLoading(true);
     try {
       const session = await osLoginRequest(creds);
       setOsSession(session);

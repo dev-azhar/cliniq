@@ -78,3 +78,22 @@ def require_os_staff(
             detail="Session expired or invalid. Please sign in again.",
         )
     return claims
+
+
+def require_portal_patient(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> dict:
+    """FastAPI dependency: require a valid patient-scoped portal token.
+
+    Distinct from :func:`require_os_staff` — a staff token cannot read patient
+    portal data because it lacks ``scope == "patient"`` and ``patientId``.
+    """
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required.")
+    claims = verify_os_token(credentials.credentials)
+    if claims is None or claims.get("scope") != "patient" or not claims.get("patientId"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired or invalid. Please sign in again.",
+        )
+    return claims

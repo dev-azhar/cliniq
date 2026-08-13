@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.core.database import get_db
-from app.core.os_auth import require_os_staff, sign_os_token
+from app.core.os_auth import require_os_staff, require_portal_patient, sign_os_token
 
 router = APIRouter(prefix="/api/v1/os", tags=["os-dashboard"])
 
@@ -552,6 +552,11 @@ def patients_list(q: str | None = None, db: Session = Depends(get_db), _claims: 
 @router.get("/patients/{patient_id}")
 def patient_overview(patient_id: str, db: Session = Depends(get_db), _claims: dict = Depends(require_os_staff)) -> dict:
     """Full Patient 360 overview for the /os Patients profile — all sections."""
+    return build_patient_overview(patient_id, db)
+
+
+def build_patient_overview(patient_id: str, db: Session) -> dict:
+    """Assemble the full Patient 360 payload — shared by the /os console and the patient portal."""
     p = db.get(models.Patient, patient_id)
     if p is None:
         raise HTTPException(status_code=404, detail="Patient not found.")
@@ -748,5 +753,128 @@ def patient_overview(patient_id: str, db: Session = Depends(get_db), _claims: di
     }
 
 
+# ============================================================================ Patient Portal
+# Patient-facing endpoints (/api/v1/portal). A portal token is scoped to a single
+# patient (``scope == "patient"`` + ``patientId``) and can only read that patient's
+# own record — enforced by :func:`require_portal_patient`.
+
+_UPCOMING_ENC = ("CHECKED_IN", "TRIAGED", "IN_CONSULT", "ADMITTED", "SCHEDULED", "BOOKED")
 
 
+def _resolve_portal_patient(username: str, db: Session) -> models.Patient | None:
+    """Resolve the sign-in identifier to a patient, else fall back to the richest demo record."""
+    uname = (username or "").strip().lower()
+    patients = db.scalars(select(models.Patient)).all()
+    if not patients:
+        return None
+    if uname:
+        for p in patients:
+            if (
+                (p.mrn and p.mrn.lower() == uname)
+                or (p.mobile and p.mobile.strip() == username.strip())
+                or (p.email and p.email.lower() == uname)
+                or (p.full_name.lower() == uname)
+            ):
+                return p
+    # Default demo patient: the one with the most lab results (richest portal view).
+    lab_counts = dict(
+        db.execute(select(models.LabOrder.patient_id, func.count()).group_by(models.LabOrder.patient_id)).all()
+    )
+    return max(patients, key=lambda p: (lab_counts.get(p.patient_id, 0), p.created_at))
+
+
+def _portal_appointments(patient_id: str, db: Session) -> dict:
+    """Split the patient's encounters into upcoming and past appointment cards."""
+    encs = db.scalars(
+        select(models.Encounter).where(models.Encounter.patient_id == patient_id)
+        .order_by(models.Encounter.arrival_ts.desc())
+    ).all()
+    staff_by_id = {s.staff_id: s for s in db.scalars(select(models.Staff))}
+    now = datetime.now(timezone.utc)
+
+    def _card(e: models.Encounter) -> dict:
+        doc = staff_by_id.get(e.doctor_id or "")
+        dr = doc.name if doc else "Care Team"
+        spec = (doc.specialty or doc.department) if doc else (e.department or "General")
+        arr = e.arrival_ts.replace(tzinfo=timezone.utc) if e.arrival_ts.tzinfo is None else e.arrival_ts
+        mode = "Video" if (e.channel or "").upper() == "APP" else "In-person"
+        upcoming = e.status in _UPCOMING_ENC or arr >= now
+        return {
+            "dr": dr, "spec": spec, "init": _initials(dr),
+            "date": e.arrival_ts.strftime("%b %d, %Y"),
+            "time": e.arrival_ts.strftime("%I:%M %p"),
+            "mode": mode,
+            "loc": (e.department or "OPD") + (" · Teleconsult" if mode == "Video" else ""),
+            "status": e.status.replace("_", " ").title(),
+            "upcoming": upcoming,
+            "visitType": e.visit_type,
+        }
+
+    cards = [_card(e) for e in encs]
+    return {
+        "upcoming": [c for c in cards if c["upcoming"]][:8],
+        "past": [c for c in cards if not c["upcoming"]][:12],
+    }
+
+
+def _portal_billing(patient_id: str, db: Session) -> dict:
+    """Outstanding balance and recent invoices for the portal Billing view."""
+    invoices = db.scalars(
+        select(models.Invoice).where(models.Invoice.patient_id == patient_id)
+        .order_by(models.Invoice.created_ts.desc()).limit(12)
+    ).all()
+    outstanding = sum((inv.balance or 0.0) for inv in invoices)
+    rows = [{
+        "invoice": inv.invoice_id[:8].upper(),
+        "date": inv.created_ts.strftime("%d %b %Y"),
+        "gross": _fmt_inr_indian(inv.total or 0.0),
+        "balance": _fmt_inr_indian(inv.balance or 0.0),
+        "status": (inv.status or "OPEN").title(),
+    } for inv in invoices]
+    return {"outstanding": _fmt_inr_indian(outstanding), "outstandingRaw": round(outstanding, 2), "invoices": rows}
+
+
+def _initials(name: str) -> str:
+    words = [w for w in name.replace("Dr.", "").replace("Dr", "").split() if w]
+    if not words:
+        return "PT"
+    if len(words) == 1:
+        return words[0][:2].upper()
+    return (words[0][0] + words[-1][0]).upper()
+
+
+@router.post("/portal/login")
+def portal_login(body: OsLoginRequest, db: Session = Depends(get_db)) -> dict:
+    """Sign a patient in to the portal. Resolves the identifier to a patient record
+    (or the richest demo patient) and issues a patient-scoped session token."""
+    username = body.username.strip()
+    password = body.password.strip()
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Username and password are required.")
+    p = _resolve_portal_patient(username, db)
+    if p is None:
+        raise HTTPException(status_code=404, detail="No patient records found. Please seed demo data.")
+    profile = {"patientId": p.patient_id, "name": p.full_name, "mrn": p.mrn, "scope": "patient"}
+    token, expires_at = sign_os_token({"sub": p.patient_id, **profile})
+    return {**profile, "token": token, "expiresAt": expires_at}
+
+
+@router.get("/portal/me")
+def portal_me(claims: dict = Depends(require_portal_patient)) -> dict:
+    """Validate the portal token and echo the patient's identity."""
+    return {
+        "patientId": claims.get("patientId"),
+        "name": claims.get("name"),
+        "mrn": claims.get("mrn"),
+        "expiresAt": claims.get("exp"),
+    }
+
+
+@router.get("/portal/summary")
+def portal_summary(claims: dict = Depends(require_portal_patient), db: Session = Depends(get_db)) -> dict:
+    """Full patient-facing dashboard payload for the logged-in patient."""
+    patient_id = claims["patientId"]
+    data = build_patient_overview(patient_id, db)
+    data["appointments"] = _portal_appointments(patient_id, db)
+    data["billing"] = _portal_billing(patient_id, db)
+    return data
