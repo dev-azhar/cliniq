@@ -3427,7 +3427,7 @@ function Avatar({ name, tone }: { name: string; tone: string }) {
   return <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white" style={{ background: tone }}>{init}</span>;
 }
 
-function SurgeryView() {
+function SurgeryView({ search = "" }: { search?: string }) {
   const [orTab, setOrTab] = useState("All ORs");
   const { data: surg } = useOsSurgery();
   const sk = surg?.kpis;
@@ -3450,6 +3450,10 @@ function SurgeryView() {
   const orTabs: readonly (readonly [string, number])[] = [["All ORs", schedule.length], ...["OR 1", "OR 2", "OR 3", "OR 4", "OR 5"].map((o) => [o, orCounts[o] || 0] as const)];
   const cur = surg?.currentSurgery;
   const today = new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+  const q = search.trim().toLowerCase();
+  const shownSchedule = schedule.filter((r) =>
+    (orTab === "All ORs" || r.or === orTab) &&
+    (!q || r.name.toLowerCase().includes(q) || r.proc.toLowerCase().includes(q) || r.surgeon.toLowerCase().includes(q)));
   const curFields: [string, string][] = cur
     ? [["Procedure", cur.procedure], ["Surgeon", cur.surgeon], ["Anesthesia", cur.anesthesia], ["Start Time", cur.start], ["Expected End", cur.end]]
     : [["Procedure", "Laparoscopic Cholecystectomy"], ["Surgeon", "Dr. Ahmed Ali"], ["Anesthesia", "Dr. Sara Khan (General)"], ["Start Time", "08:00 AM"], ["Expected End", "09:30 AM (in 35 min)"]];
@@ -3521,7 +3525,7 @@ function SurgeryView() {
                 <th className={cellHead}>Time</th><th className={cellHead}>OR</th><th className={cellHead}>Patient</th><th className={cellHead}>Procedure</th><th className={cellHead}>Surgeon</th><th className={cellHead}>Anesthesia</th><th className={cellHead}>Status</th><th className={cellHead}>Duration</th><th className="pb-1.5 font-bold">Alerts</th>
               </tr></thead>
               <tbody>
-                {schedule.map((r) => (
+                {shownSchedule.map((r) => (
                   <tr key={r.mrn} className="border-t border-black/[0.05]">
                     <td className="py-1.5 pr-3 font-semibold text-slate-600">{r.time}</td>
                     <td className="py-1.5 pr-3"><span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{r.or}</span></td>
@@ -3537,7 +3541,8 @@ function SurgeryView() {
               </tbody>
             </table>
           </div>
-          <div className="mt-2 text-[11px] text-slate-400">Showing {schedule.length} active {schedule.length === 1 ? "case" : "cases"} on today's board</div>
+          {shownSchedule.length === 0 && <div className="py-6 text-center text-[11.5px] text-slate-400">No cases match this filter.</div>}
+          <div className="mt-2 text-[11px] text-slate-400">Showing {shownSchedule.length} active {shownSchedule.length === 1 ? "case" : "cases"} on today's board</div>
         </div>
 
         {/* Live OT Status */}
@@ -3650,7 +3655,7 @@ function SurgeryView() {
   );
 }
 
-function BillingView() {
+function BillingView({ search = "" }: { search?: string }) {
   const [wlTab, setWlTab] = useState("All");
   const { data: bill } = useOsBilling();
   const k = bill?.kpis;
@@ -3709,6 +3714,10 @@ function BillingView() {
   const pm = bill?.paymentModes?.modes?.length
     ? { center: bill.paymentModes.total, segments: bill.paymentModes.modes.map((m, i) => ({ pct: m.pct, color: pmPalette[i % pmPalette.length] })), legend: bill.paymentModes.modes.map((m, i) => ({ label: m.label, value: `${m.value} · ${m.pct}%`, color: pmPalette[i % pmPalette.length] })) }
     : { center: "₹ 9.72 L", segments: [{ pct: 42.4, color: "#0078d4" }, { pct: 26.1, color: "#8764B8" }, { pct: 19.8, color: "#16a34a" }, { pct: 11.7, color: "#CA5010" }], legend: [{ label: "Net Banking", value: "₹ 4.12 L · 42.4%", color: "#0078d4" }, { label: "Card", value: "₹ 2.54 L · 26.1%", color: "#8764B8" }, { label: "UPI", value: "₹ 1.92 L · 19.8%", color: "#16a34a" }, { label: "Cash", value: "₹ 1.14 L · 11.7%", color: "#CA5010" }] };
+  const q = search.trim().toLowerCase();
+  const shownInvoices = invoices.filter((r) =>
+    (wlTab === "All" || r.status === wlTab) &&
+    (!q || r.name.toLowerCase().includes(q) || r.invoice.toLowerCase().includes(q) || (r.mrn || "").toLowerCase().includes(q)));
 
   return (
     <div className="space-y-4">
@@ -3746,7 +3755,7 @@ function BillingView() {
               <th className={cellHead}>Invoice #</th><th className={cellHead}>Patient</th><th className={cellHead}>MRN</th><th className={cellHead}>Date</th><th className={cellHead}>Visit Type</th><th className={cellHead}>Gross Amount</th><th className={cellHead}>Balance Due</th><th className={cellHead}>Status</th><th className={cellHead}>Due Date</th><th className="pb-1.5 font-bold">Actions</th>
             </tr></thead>
             <tbody>
-              {(wlTab === "All" ? invoices : invoices.filter((r) => r.status === wlTab)).map((r) => (
+              {shownInvoices.map((r) => (
                 <tr key={r.invoice} className="border-t border-black/[0.05]">
                   <td className="py-1.5 pr-3 font-semibold text-[#0078d4]">{r.invoice}</td>
                   <td className="py-1.5 pr-3 font-semibold text-slate-700">{r.name}</td>
@@ -3763,6 +3772,7 @@ function BillingView() {
             </tbody>
           </table>
         </div>
+        {shownInvoices.length === 0 && <div className="py-6 text-center text-[11.5px] text-slate-400">No invoices match this filter.</div>}
       </div>
 
       {/* Claims summary · denials · collection trend */}
@@ -3836,7 +3846,7 @@ function BillingView() {
   );
 }
 
-function InventoryView() {
+function InventoryView({ search = "" }: { search?: string }) {
   const [wlTab, setWlTab] = useState("All Items");
   const { data: inv } = useOsInventory();
   const ik = inv?.kpis;
@@ -3905,6 +3915,10 @@ function InventoryView() {
   const valCat = inv?.valueByCategory
     ? { center: inv.valueByCategory.total, segments: inv.valueByCategory.segments.map((s) => ({ pct: s.pct, color: s.color })), legend: inv.valueByCategory.segments.map((s) => ({ label: s.label, value: `${s.value} · ${s.pct}%`, color: s.color })) }
     : { center: "₹ 8.64 Cr", segments: [{ pct: 37.7, color: "#0078d4" }, { pct: 27.9, color: "#16a34a" }, { pct: 17.6, color: "#CA8A04" }, { pct: 11.1, color: "#8764B8" }, { pct: 5.7, color: "#94a3b8" }], legend: [{ label: "Pharmaceuticals", value: "₹ 3.26 Cr · 37.7%", color: "#0078d4" }, { label: "Medical Consumables", value: "₹ 2.41 Cr · 27.9%", color: "#16a34a" }, { label: "Surgical Items", value: "₹ 1.52 Cr · 17.6%", color: "#CA8A04" }, { label: "Equipment", value: "₹ 0.96 Cr · 11.1%", color: "#8764B8" }, { label: "Others", value: "₹ 0.49 Cr · 5.7%", color: "#94a3b8" }] };
+  const q = search.trim().toLowerCase();
+  const shownItems = items.filter((r) =>
+    (wlTab === "All Items" || r.status === wlTab) &&
+    (!q || r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q) || r.cat.toLowerCase().includes(q)));
 
   return (
     <div className="space-y-4">
@@ -3940,7 +3954,7 @@ function InventoryView() {
               <th className={cellHead}>Item Code</th><th className={cellHead}>Item Name</th><th className={cellHead}>Category</th><th className={cellHead}>Unit</th><th className={cellHead}>Current Stock</th><th className={cellHead}>Min Level</th><th className={cellHead}>Max Level</th><th className={cellHead}>Status</th><th className={cellHead}>Last Updated</th><th className="pb-1.5 font-bold">Actions</th>
             </tr></thead>
             <tbody>
-              {(wlTab === "All Items" ? items : items.filter((r) => r.status === wlTab)).map((r) => (
+              {shownItems.map((r) => (
                 <tr key={r.code} className="border-t border-black/[0.05]">
                   <td className="py-1.5 pr-3 font-semibold text-[#0078d4]">{r.code}</td>
                   <td className="py-1.5 pr-3 font-semibold text-slate-700">{r.name}</td>
@@ -3957,7 +3971,8 @@ function InventoryView() {
             </tbody>
           </table>
         </div>
-        <div className="mt-2 text-[11px] text-slate-400">Showing {items.length} of {ik ? ik.totalItems.toLocaleString() : "4,586"} items</div>
+        {shownItems.length === 0 && <div className="py-6 text-center text-[11.5px] text-slate-400">No items match this filter.</div>}
+        <div className="mt-2 text-[11px] text-slate-400">Showing {shownItems.length} of {ik ? ik.totalItems.toLocaleString() : "4,586"} items</div>
       </div>
 
       {/* Purchase orders · expiring · top consumed */}
@@ -4059,6 +4074,8 @@ export default function CommandCenterOS() {
   const [messages, setMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
   const [draft, setDraft] = useState("");
   const [userMenu, setUserMenu] = useState(false);
+  const [search, setSearch] = useState("");
+  const searchable = activeNav === "Billing" || activeNav === "Inventory" || activeNav === "Surgery / OT";
 
   const logout = () => {
     clearOsSession();
@@ -4077,6 +4094,9 @@ export default function CommandCenterOS() {
     });
     return () => window.removeEventListener("storage", onStorage);
   }, [navigate]);
+
+  // Reset the search box when switching workspaces.
+  useEffect(() => { setSearch(""); }, [activeNav]);
 
   // Route guard: no session → back to the login screen.
   if (!session) return <Navigate to="/os/login" replace />;
@@ -4140,8 +4160,12 @@ export default function CommandCenterOS() {
 
         <label className="flex h-9 max-w-[340px] flex-1 items-center gap-2 rounded-xl border border-black/[0.07] bg-white/70 px-3 text-slate-400">
           <Search size={15} />
-          <input className="w-full bg-transparent text-[13px] text-slate-700 outline-none placeholder:text-slate-400" placeholder="Search anything..." />
-          <span className="rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">⌘ K</span>
+          <input data-fn value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-transparent text-[13px] text-slate-700 outline-none placeholder:text-slate-400" placeholder={searchable ? `Search ${activeNav}…` : "Search anything..."} />
+          {search ? (
+            <button type="button" data-fn aria-label="Clear search" onClick={() => setSearch("")} className="text-slate-400 hover:text-slate-600"><XCircle size={14} /></button>
+          ) : (
+            <span className="rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">⌘ K</span>
+          )}
         </label>
 
         <div className="ml-1 hidden items-center gap-1.5 xl:flex">
@@ -4216,7 +4240,7 @@ export default function CommandCenterOS() {
 
         {/* ------------------------------------------------------------- MAIN */}
         <main className="min-w-0 flex-1 overflow-y-auto px-5 py-4">
-          {activeNav === "Patients" ? <PatientsView /> : activeNav === "Admissions" ? <AdmissionsView /> : activeNav === "Care Team" ? <CareTeamView /> : activeNav === "Labs" ? <LabsView /> : activeNav === "Radiology" ? <RadiologyView /> : activeNav === "Pharmacy" ? <PharmacyView /> : activeNav === "Surgery / OT" ? <SurgeryView /> : activeNav === "Billing" ? <BillingView /> : activeNav === "Inventory" ? <InventoryView /> : activeNav === "ICU" ? <ICUView /> : activeNav === "Emergency" ? <EmergencyView /> : (
+          {activeNav === "Patients" ? <PatientsView /> : activeNav === "Admissions" ? <AdmissionsView /> : activeNav === "Care Team" ? <CareTeamView /> : activeNav === "Labs" ? <LabsView /> : activeNav === "Radiology" ? <RadiologyView /> : activeNav === "Pharmacy" ? <PharmacyView /> : activeNav === "Surgery / OT" ? <SurgeryView search={search} /> : activeNav === "Billing" ? <BillingView search={search} /> : activeNav === "Inventory" ? <InventoryView search={search} /> : activeNav === "ICU" ? <ICUView /> : activeNav === "Emergency" ? <EmergencyView /> : (
           <>
           {/* header */}
           <div className="mb-3 flex items-center justify-between">
