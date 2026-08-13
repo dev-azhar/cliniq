@@ -5,7 +5,7 @@ import {
   Shield, Users, ClipboardList, Sparkles, Settings, HelpCircle, LogOut, Search,
   Bell, MessageSquare, ChevronDown, Clock, MapPin, CalendarPlus, CheckCircle2, Circle,
   TriangleAlert, Video, RefreshCw, Download, Building2, Mic, Phone, Heart, Navigation,
-  Info, ChevronRight,
+  Info, ChevronRight, CalendarClock, XCircle, Stethoscope, Plus,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -119,6 +119,187 @@ function StatCard({ s }: { s: typeof STATS[number] }) {
   );
 }
 
+/* ------------------------------------------------------------ APPOINTMENTS */
+
+const APPT_STATS = [
+  { icon: CalendarClock, tint: "#0078d4", label: "Upcoming", value: "3" },
+  { icon: CheckCircle2, tint: "#16a34a", label: "Completed", value: "24" },
+  { icon: XCircle, tint: "#D13438", label: "Cancelled", value: "2" },
+  { icon: Stethoscope, tint: "#8764B8", label: "This Year", value: "29" },
+];
+
+type Appt = {
+  dr: string; spec: string; init: string; tone: string;
+  date: string; day?: string; time: string; mode: "In-person" | "Video";
+  loc: string; status: string; statusTone: string; queue?: string;
+};
+
+const UPCOMING_APPTS: Appt[] = [
+  { dr: "Dr. Ahmed Ali", spec: "Cardiologist", init: "AA", tone: "#0c3b63", date: "May 21, 2026", day: "Tomorrow", time: "10:00 AM", mode: "In-person", loc: "OPD Room 203, Main Building", status: "Confirmed", statusTone: "#16a34a", queue: "#6" },
+  { dr: "Dr. Meera Nair", spec: "Endocrinologist", init: "MN", tone: "#8764B8", date: "May 28, 2026", day: "Next Week", time: "11:30 AM", mode: "Video", loc: "Teleconsultation link", status: "Confirmed", statusTone: "#16a34a" },
+  { dr: "Dr. Rajesh Kumar", spec: "General Physician", init: "RK", tone: "#CA5010", date: "Jun 04, 2026", time: "09:15 AM", mode: "In-person", loc: "OPD Room 110, Block B", status: "Pending", statusTone: "#CA8A04" },
+];
+
+const PAST_APPTS: Appt[] = [
+  { dr: "Dr. Ahmed Ali", spec: "Cardiologist", init: "AA", tone: "#0c3b63", date: "May 07, 2026", time: "10:00 AM", mode: "In-person", loc: "Hypertension — stable", status: "Completed", statusTone: "#64748b" },
+  { dr: "Dr. Sara Iqbal", spec: "Dermatologist", init: "SI", tone: "#D6336C", date: "Apr 22, 2026", time: "04:30 PM", mode: "Video", loc: "Eczema — follow-up advised", status: "Completed", statusTone: "#64748b" },
+  { dr: "Dr. Meera Nair", spec: "Endocrinologist", init: "MN", tone: "#8764B8", date: "Apr 03, 2026", time: "11:00 AM", mode: "In-person", loc: "Diabetes review — HbA1c 6.2%", status: "Completed", statusTone: "#64748b" },
+];
+
+const SPECIALTIES = ["Cardiology", "Endocrinology", "Dermatology", "General Physician", "Orthopedics", "Neurology"];
+
+const AVAILABLE_DOCS = [
+  { dr: "Dr. Ahmed Ali", spec: "Cardiologist", init: "AA", tone: "#0c3b63", slot: "Today, 3:00 PM", rating: "4.8" },
+  { dr: "Dr. Fatima Sheikh", spec: "Physician", init: "FS", tone: "#16a34a", slot: "Tomorrow, 10:00 AM", rating: "4.9" },
+  { dr: "Dr. Vikram Rao", spec: "Orthopedic", init: "VR", tone: "#CA5010", slot: "Tomorrow, 5:30 PM", rating: "4.7" },
+];
+
+function ApptCard({ a, past }: { a: Appt; past?: boolean }) {
+  return (
+    <div className={`${card} p-4`}>
+      <div className="flex flex-wrap items-start gap-3">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-[14px] font-bold text-white" style={{ background: a.tone }}>{a.init}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 text-[14.5px] font-bold text-slate-800">{a.dr} <CheckCircle2 size={13} className="text-[#0078d4]" /></div>
+          <div className="text-[11.5px] text-slate-500">{a.spec}</div>
+          <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-slate-600">
+            <span className="flex items-center gap-1"><Calendar size={12} className="text-slate-400" /> {a.date}{a.day ? ` (${a.day})` : ""}</span>
+            <span className="flex items-center gap-1"><Clock size={12} className="text-slate-400" /> {a.time}</span>
+            <span className="flex items-center gap-1">{a.mode === "Video" ? <Video size={12} className="text-slate-400" /> : <MapPin size={12} className="text-slate-400" />} {a.loc}</span>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${a.statusTone}15`, color: a.statusTone }}>{a.status}</span>
+          {a.queue && <span className="text-[10px] text-slate-400">Queue {a.queue}</span>}
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {past ? (
+          <>
+            <button type="button" className="flex items-center gap-1.5 rounded-xl border border-black/[0.08] px-3 py-2 text-[11.5px] font-semibold text-slate-600"><FileText size={13} /> View Summary</button>
+            <button type="button" className="flex items-center gap-1.5 rounded-xl border border-black/[0.08] px-3 py-2 text-[11.5px] font-semibold text-slate-600"><Download size={13} /> Prescription</button>
+            <button type="button" className="flex items-center gap-1.5 rounded-xl bg-[#0078d4] px-3 py-2 text-[11.5px] font-semibold text-white"><CalendarPlus size={13} /> Book Follow-up</button>
+          </>
+        ) : (
+          <>
+            {a.mode === "Video"
+              ? <button type="button" className="flex items-center gap-1.5 rounded-xl bg-[#0078d4] px-3 py-2 text-[11.5px] font-semibold text-white"><Video size={13} /> Join Call</button>
+              : <button type="button" className="flex items-center gap-1.5 rounded-xl bg-[#0078d4] px-3 py-2 text-[11.5px] font-semibold text-white"><CheckCircle2 size={13} /> Check-In</button>}
+            <button type="button" className="flex items-center gap-1.5 rounded-xl border border-black/[0.08] px-3 py-2 text-[11.5px] font-semibold text-slate-600"><Calendar size={13} /> Reschedule</button>
+            {a.mode !== "Video" && <button type="button" className="flex items-center gap-1.5 rounded-xl border border-black/[0.08] px-3 py-2 text-[11.5px] font-semibold text-slate-600"><Navigation size={13} /> Directions</button>}
+            <button type="button" className="flex items-center gap-1.5 rounded-xl border border-[#D13438]/30 px-3 py-2 text-[11.5px] font-semibold text-[#D13438]"><XCircle size={13} /> Cancel</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AppointmentsView() {
+  const [tab, setTab] = useState<"Upcoming" | "Past" | "Cancelled">("Upcoming");
+  const list = tab === "Upcoming" ? UPCOMING_APPTS : tab === "Past" ? PAST_APPTS : [];
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-[22px] font-extrabold tracking-tight text-slate-800">My Appointments</h1>
+          <p className="text-[13px] text-slate-500">Manage your upcoming visits, teleconsults and follow-ups.</p>
+        </div>
+        <button type="button" className="flex items-center gap-1.5 rounded-xl bg-[#0078d4] px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm"><Plus size={16} /> Book Appointment</button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {APPT_STATS.map((s) => (
+          <div key={s.label} className={`${card} flex items-center gap-3 p-3.5`}>
+            <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: `${s.tint}15`, color: s.tint }}><s.icon size={18} /></span>
+            <div><div className="text-[20px] font-extrabold leading-none text-slate-800">{s.value}</div><div className="text-[11px] text-slate-400">{s.label}</div></div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
+        <div className="min-w-0 space-y-4">
+          <div className={`${card} flex flex-wrap items-center justify-between gap-3 p-2.5`}>
+            <div className="flex gap-1">
+              {(["Upcoming", "Past", "Cancelled"] as const).map((t) => (
+                <button key={t} type="button" onClick={() => setTab(t)} className="rounded-xl px-4 py-2 text-[12.5px] font-semibold transition"
+                  style={{ background: tab === t ? "rgba(0,120,212,.1)" : "transparent", color: tab === t ? "#0a5aa8" : "#64748b" }}>{t}</button>
+              ))}
+            </div>
+            <label className="flex h-9 min-w-[180px] flex-1 items-center gap-2 rounded-xl border border-black/[0.08] bg-slate-50 px-3 text-slate-400 sm:max-w-[240px]">
+              <Search size={14} /><input className="w-full bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400" placeholder="Search appointments..." />
+            </label>
+          </div>
+
+          {list.length === 0 ? (
+            <div className={`${card} grid place-items-center gap-2 p-10 text-center`}>
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Calendar size={22} /></span>
+              <div className="text-[13.5px] font-bold text-slate-700">No {tab.toLowerCase()} appointments</div>
+              <div className="text-[12px] text-slate-400">You have no {tab.toLowerCase()} appointments right now.</div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {list.map((a, i) => <ApptCard key={`${a.dr}-${i}`} a={a} past={tab === "Past"} />)}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <div className={`${card} p-4`}>
+            <h3 className="mb-3 text-[13px] font-bold text-slate-800">Book New Appointment</h3>
+            <div className="space-y-2.5">
+              <div><div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Specialty</div>
+                <select className="w-full rounded-xl border border-black/[0.08] bg-slate-50 px-3 py-2 text-[12.5px] text-slate-700 outline-none">
+                  {SPECIALTIES.map((s) => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+              <div><div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Preferred Date</div>
+                <input type="date" className="w-full rounded-xl border border-black/[0.08] bg-slate-50 px-3 py-2 text-[12.5px] text-slate-700 outline-none" />
+              </div>
+              <button type="button" className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#0078d4] py-2.5 text-[12.5px] font-semibold text-white"><Search size={14} /> Find Slots</button>
+            </div>
+          </div>
+
+          <div className={`${card} p-4`}>
+            <div className="mb-3 flex items-center justify-between"><h3 className="text-[13px] font-bold text-slate-800">Available Doctors</h3><button type="button" className="text-[11px] font-semibold text-[#0078d4]">View All ›</button></div>
+            <div className="space-y-2.5">
+              {AVAILABLE_DOCS.map((d) => (
+                <div key={d.dr} className="flex items-center gap-2.5 border-b border-black/[0.04] pb-2.5 last:border-0 last:pb-0">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white" style={{ background: d.tone }}>{d.init}</span>
+                  <div className="min-w-0 flex-1"><div className="truncate text-[12.5px] font-semibold text-slate-700">{d.dr}</div><div className="text-[10.5px] text-slate-400">{d.spec} · ★ {d.rating}</div><div className="text-[10.5px] font-semibold text-[#16a34a]">{d.slot}</div></div>
+                  <button type="button" className="shrink-0 rounded-lg bg-[rgba(0,120,212,.1)] px-2.5 py-1.5 text-[11px] font-semibold text-[#0078d4]">Book</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className={`${card} p-4`}>
+            <h3 className="mb-2 text-[13px] font-bold text-slate-800">Reminders</h3>
+            <div className="space-y-2 text-[11.5px] text-slate-600">
+              <div className="flex items-start gap-2"><Bell size={14} className="mt-0.5 text-[#0078d4]" /> Arrive 15 minutes early for check-in and paperwork.</div>
+              <div className="flex items-start gap-2"><FileText size={14} className="mt-0.5 text-[#16a34a]" /> Carry your previous reports and prescriptions.</div>
+              <div className="flex items-start gap-2"><Shield size={14} className="mt-0.5 text-[#8764B8]" /> Keep your insurance card handy for cashless billing.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Placeholder({ label, onHome }: { label: string; onHome: () => void }) {
+  return (
+    <div className="grid min-h-[60vh] place-items-center">
+      <div className={`${card} grid max-w-sm place-items-center gap-3 p-10 text-center`}>
+        <span className="grid h-14 w-14 place-items-center rounded-2xl text-white" style={{ background: "linear-gradient(150deg,#3a96e0,#0078d4)" }}><Sparkles size={24} /></span>
+        <div className="text-[16px] font-bold text-slate-800">{label}</div>
+        <p className="text-[12.5px] text-slate-500">This section is coming soon. We're building a premium {label.toLowerCase()} experience for you.</p>
+        <button type="button" onClick={onHome} className="mt-1 rounded-xl bg-[#0078d4] px-4 py-2 text-[12.5px] font-semibold text-white">Back to Home</button>
+      </div>
+    </div>
+  );
+}
+
 export default function PatientPortal() {
   const navigate = useNavigate();
   const [active, setActive] = useState("Home");
@@ -167,6 +348,7 @@ export default function PatientPortal() {
 
         {/* content */}
         <main className="flex-1 overflow-y-auto p-5">
+          {active === "Home" && (
           <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
             {/* -------------------------------------------------- LEFT MAIN */}
             <div className="min-w-0 space-y-4">
@@ -373,6 +555,9 @@ export default function PatientPortal() {
               </div>
             </div>
           </div>
+          )}
+          {active === "Appointments" && <AppointmentsView />}
+          {active !== "Home" && active !== "Appointments" && <Placeholder label={active} onHome={() => setActive("Home")} />}
         </main>
       </div>
     </div>
