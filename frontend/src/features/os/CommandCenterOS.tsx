@@ -16,7 +16,8 @@ import {
   TrendingUp, Truck, Star, CreditCard, Wallet, Landmark,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
-import { useOsOverview, useOsBilling, useOsInventory, useOsSurgery } from "./osApi";
+import { useOsOverview, useOsBilling, useOsInventory, useOsSurgery, useOsPatients, useOsPatient } from "./osApi";
+import type { OsPatient } from "./osApi";
 import { getOsSession, clearOsSession, osInitials, fetchOsMe } from "./osSession";
 
 /* ------------------------------------------------------------------ data --- */
@@ -1549,30 +1550,47 @@ function NotesTab() {
   );
 }
 
-function PatientOverview() {
+function PatientOverview({ data }: { data?: OsPatient }) {
+  const vitalCards = data
+    ? [
+      { label: "Blood Pressure", short: "BP", value: data.vitals.bp ?? "—", unit: "mmHg", color: "#0078d4" },
+      { label: "Heart Rate", short: "HR", value: data.vitals.hr != null ? String(data.vitals.hr) : "—", unit: "bpm", color: "#D13438" },
+      { label: "SpO₂", short: "SpO₂", value: data.vitals.spo2 != null ? `${data.vitals.spo2}%` : "—", unit: "SpO₂", color: "#16a34a" },
+      { label: "Temp", short: "Temp", value: data.vitals.temp != null ? `${data.vitals.temp}°` : "—", unit: "°C", color: "#CA5010" },
+      { label: "Resp Rate", short: "RR", value: data.vitals.rr != null ? String(data.vitals.rr) : "—", unit: "br/min", color: "#8764B8" },
+    ]
+    : VITAL_CARDS.map((v, i) => ({ label: v.label, short: VITAL_SHORT[i], value: v.value, unit: v.unit, color: v.color }));
+  const labs = data ? data.labs : LATEST_LABS.map((l) => ({ test: l.test, value: l.value, status: l.status, date: "" }));
+  const meds = data ? data.medications.map((m) => ({ name: m.name, dose: m.dose, freq: "", route: "" })) : MEDS_OV;
+  const problems = data ? data.problems.map((p, i) => ({ name: p.name, primary: i === 0 })) : PROBLEMS_OV;
+  const careTeam = data ? data.careTeam : CARE_TEAM_OV;
+  const encounters = data
+    ? data.encounters.map((e) => ({ date: e.date, time: e.time, kind: e.type, tag: e.department, detail: e.status, tone: "#0078d4", icon: Stethoscope }))
+    : RECENT_ENC;
+  const labTone = (s: string) => (/critical/i.test(s) ? "#D13438" : /high|low/i.test(s) ? "#CA5010" : "#16a34a");
+  const summaryText = data
+    ? (data.summary || `${data.name} · ${data.age ?? "—"} ${data.gender ?? ""}. ${data.problems.length ? `Active problems: ${data.problems.map((p) => p.name).join(", ")}.` : "No active problems recorded."} ${data.department !== "—" ? `Latest encounter: ${data.department}.` : ""}`.trim())
+    : "Ahmed is a 58-year-old male admitted with NSTEMI. He has a history of Type 2 Diabetes Mellitus, Hypertension and Hyperlipidemia. Currently in ICU on dual antiplatelet therapy. Troponin levels are elevated. Hemodynamically stable.";
+  const riskColor = data ? (data.riskLevel === "High" ? "#D13438" : data.riskLevel === "Moderate" ? "#CA5010" : "#16a34a") : "#D13438";
   return (
     <div className="space-y-3">
       <div className="grid gap-3 lg:grid-cols-[1fr_1.5fr_1fr]">
         <div className={`${card} p-3`}>
           <div className="mb-1.5 flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-[12px] font-bold text-[#0a5aa8]"><Sparkles size={13} /> Clinical Summary (AI)</span>
-            <span className="text-[9.5px] text-slate-400">Generated 2 min ago</span>
+            <span className="text-[9.5px] text-slate-400">{data ? "Live" : "Generated 2 min ago"}</span>
           </div>
-          <p className="text-[11.5px] leading-relaxed text-slate-600">
-            Ahmed is a 58-year-old male admitted with NSTEMI. He has a history of Type 2 Diabetes Mellitus,
-            Hypertension and Hyperlipidemia. Currently in ICU on dual antiplatelet therapy. Troponin levels
-            are elevated. Hemodynamically stable.
-          </p>
+          <p className="text-[11.5px] leading-relaxed text-slate-600">{summaryText}</p>
           <div className="mt-2.5 grid grid-cols-2 gap-2">
             <div className="rounded-lg bg-white/70 p-2">
-              <div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">Risk Score</div>
-              <div className="text-[16px] font-extrabold text-[#D13438]">85%</div>
-              <div className="text-[10px] font-semibold text-[#D13438]">High</div>
+              <div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">Risk Level</div>
+              <div className="text-[16px] font-extrabold" style={{ color: riskColor }}>{data ? data.riskLevel : "85%"}</div>
+              <div className="text-[10px] font-semibold" style={{ color: riskColor }}>{data ? `${data.abnormalLabs} abnormal labs` : "High"}</div>
             </div>
             <div className="rounded-lg bg-white/70 p-2">
-              <div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">Readmission Risk</div>
-              <div className="text-[16px] font-extrabold text-[#CA5010]">36%</div>
-              <div className="text-[10px] font-semibold text-[#CA5010]">Moderate</div>
+              <div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">Active Problems</div>
+              <div className="text-[16px] font-extrabold text-[#CA5010]">{data ? problems.length : "36%"}</div>
+              <div className="text-[10px] font-semibold text-[#CA5010]">{data ? "conditions" : "Moderate"}</div>
             </div>
           </div>
         </div>
@@ -1580,12 +1598,12 @@ function PatientOverview() {
         <div className={`${card} p-3`}>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[12px] font-bold text-[#0c3b63]">Latest Vitals</span>
-            <span className="text-[10px] text-slate-400">10:15 AM · <button type="button" className="font-semibold text-[#0078d4]">View Trends</button></span>
+            <span className="text-[10px] text-slate-400">{data?.vitals.capturedTs ?? "10:15 AM"}</span>
           </div>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-            {VITAL_CARDS.map((v, i) => (
+            {vitalCards.map((v) => (
               <div key={v.label} className="rounded-lg border border-black/[0.05] bg-white/60 p-2 text-center">
-                <div className="text-[9.5px] font-semibold text-slate-400">{VITAL_SHORT[i]}</div>
+                <div className="text-[9.5px] font-semibold text-slate-400">{v.short}</div>
                 <div className="text-[13.5px] font-extrabold text-slate-800" style={{ fontVariantNumeric: "tabular-nums" }}>{v.value}</div>
                 <div className="text-[8.5px] text-slate-400">{v.unit}</div>
                 <div className="mt-0.5 flex justify-center"><Spark color={v.color} /></div>
@@ -1597,7 +1615,8 @@ function PatientOverview() {
         <div className={`${card} p-3`}>
           <PanelHead title="Care Team" action="View All" />
           <div className="space-y-1.5">
-            {CARE_TEAM_OV.map((m) => (
+            {careTeam.length === 0 && <div className="text-[11px] text-slate-400">No care team assigned.</div>}
+            {careTeam.map((m) => (
               <div key={m.name} className="flex items-center gap-2">
                 <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[rgba(0,120,212,.1)] text-[10px] font-bold text-[#0078d4]">{initials(m.name)}</span>
                 <div className="min-w-0 flex-1">
@@ -1608,7 +1627,6 @@ function PatientOverview() {
               </div>
             ))}
           </div>
-          <button type="button" className="mt-1.5 text-[11px] font-semibold text-[#0078d4]">+ 2 More Team Members</button>
         </div>
       </div>
 
@@ -1616,15 +1634,16 @@ function PatientOverview() {
         <div className={`${card} p-3`}>
           <PanelHead title="Latest Labs" action="View All" />
           <div className="space-y-1">
-            {LATEST_LABS.map((l) => (
+            {labs.length === 0 && <div className="text-[11px] text-slate-400">No lab results.</div>}
+            {labs.map((l) => (
               <div key={l.test} className="flex items-center justify-between gap-2 text-[11.5px]">
                 <span className="flex-1 truncate font-semibold text-slate-700">{l.test}</span>
                 <span className="text-slate-500">{l.value}</span>
-                <Pill tone={LAB_STATUS_TONE[l.status as keyof typeof LAB_STATUS_TONE]}>{l.status}</Pill>
+                <Pill tone={data ? labTone(l.status) : LAB_STATUS_TONE[l.status as keyof typeof LAB_STATUS_TONE]}>{l.status}</Pill>
               </div>
             ))}
           </div>
-          <div className="mt-1.5 text-[9.5px] text-slate-400">10 May 2024 · 10:10 AM</div>
+          {labs[0] && "date" in labs[0] && labs[0].date && <div className="mt-1.5 text-[9.5px] text-slate-400">{labs[0].date}</div>}
         </div>
 
         <div className={`${card} p-3`}>
@@ -1645,10 +1664,11 @@ function PatientOverview() {
 
         <div className={`${card} p-3`}>
           <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-[12.5px] font-bold text-[#0c3b63]">Active Medications ({MEDS_OV.length})</h3>
+            <h3 className="text-[12.5px] font-bold text-[#0c3b63]">Active Medications ({meds.length})</h3>
           </div>
           <div className="space-y-1">
-            {MEDS_OV.map((m) => (
+            {meds.length === 0 && <div className="text-[11px] text-slate-400">No active medications.</div>}
+            {meds.map((m) => (
               <div key={m.name} className="flex items-center justify-between gap-1 text-[11.5px]">
                 <span className="flex-1 truncate font-semibold text-slate-700">{m.name}</span>
                 <span className="text-slate-500">{m.dose}</span>
@@ -1657,13 +1677,13 @@ function PatientOverview() {
               </div>
             ))}
           </div>
-          <button type="button" className="mt-1.5 text-[11px] font-semibold text-[#0078d4]">+ Add Medication</button>
         </div>
 
         <div className={`${card} p-3`}>
           <PanelHead title="Current Problems" action="View All" />
           <ol className="space-y-1">
-            {PROBLEMS_OV.map((p, i) => (
+            {problems.length === 0 && <li className="text-[11px] text-slate-400">No active problems.</li>}
+            {problems.map((p, i) => (
               <li key={p.name} className="flex items-center gap-2 text-[11.5px] text-slate-600">
                 <span className="font-bold text-slate-400">{i + 1}.</span>
                 <span className="flex-1">{p.name}</span>
@@ -1677,7 +1697,8 @@ function PatientOverview() {
       <div className={`${card} p-3`}>
         <PanelHead title="Recent Encounters" action="View All" />
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {RECENT_ENC.map((e, i) => (
+          {encounters.length === 0 && <div className="text-[11px] text-slate-400">No recent encounters.</div>}
+          {encounters.map((e, i) => (
             <div key={i} className="flex items-stretch gap-2">
               <div className="w-[160px] shrink-0">
                 <div className="text-[10px] text-slate-400">{e.date} {e.time}</div>
@@ -1688,78 +1709,81 @@ function PatientOverview() {
                 {e.tag && <div className="mt-0.5 text-[10px] font-semibold text-slate-400">{e.tag}</div>}
                 <div className="mt-0.5 text-[10.5px] leading-snug text-slate-500">{e.detail}</div>
               </div>
-              {i < RECENT_ENC.length - 1 && <div className="mt-3 h-px w-5 shrink-0 self-start bg-black/10" />}
+              {i < encounters.length - 1 && <div className="mt-3 h-px w-5 shrink-0 self-start bg-black/10" />}
             </div>
           ))}
-        </div>
-      </div>
-
-      <div className={`${card} p-3`}>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          {ADMISSION_BAR.map((a) => (
-            <div key={a.label}>
-              <div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">{a.label}</div>
-              <div className="text-[12px] font-semibold text-slate-700">{a.value}</div>
-            </div>
-          ))}
-          <button type="button" className="ml-auto grid h-7 w-7 place-items-center rounded-lg text-slate-400"><MoreHorizontal size={16} /></button>
         </div>
       </div>
     </div>
   );
 }
 
-function PatientsView() {
+function PatientsView({ search = "" }: { search?: string }) {
   const [tab, setTab] = useState("Overview");
+  const [picked, setPicked] = useState<string | null>(null);
+  const { data: list } = useOsPatients();
+  const patients = list?.patients ?? [];
+  const q = search.trim().toLowerCase();
+  const filtered = q ? patients.filter((p) => p.name.toLowerCase().includes(q) || (p.mrn || "").toLowerCase().includes(q)) : patients;
+  const pid = picked ?? filtered[0]?.patientId ?? patients[0]?.patientId ?? null;
+  const { data: pt } = useOsPatient(pid);
+  const riskColor = pt?.riskLevel === "High" ? "#D13438" : pt?.riskLevel === "Moderate" ? "#CA5010" : "#16a34a";
+  const allergyText = pt?.allergies.map((a) => a.substance) ?? ["Penicillin", "Aspirin"];
   return (
     <div className="space-y-4">
       {/* patient header */}
       <div className={`${card} p-4`}>
         <div className="flex flex-wrap items-start gap-4">
-          <div className="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-2xl text-[22px] font-extrabold text-white" style={{ background: "linear-gradient(150deg,#3a96e0,#0078d4)" }}>AK</div>
+          <div className="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-2xl text-[22px] font-extrabold text-white" style={{ background: "linear-gradient(150deg,#3a96e0,#0078d4)" }}>{pt ? initials(pt.name) : "AK"}</div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[18px] font-extrabold text-slate-800">Ahmed Khan</span>
-              <span className="text-slate-400">♂</span>
-              <Pill tone="#D13438"><span className="flex items-center gap-1"><TriangleAlert size={10} /> High Risk</span></Pill>
+              <span className="text-[18px] font-extrabold text-slate-800">{pt?.name ?? "Ahmed Khan"}</span>
+              <span className="text-slate-400">{pt?.gender === "Female" ? "♀" : "♂"}</span>
+              <Pill tone={riskColor}><span className="flex items-center gap-1"><TriangleAlert size={10} /> {pt ? `${pt.riskLevel} Risk` : "High Risk"}</span></Pill>
+              {/* patient picker */}
+              <div className="relative ml-1">
+                <select data-fn value={pid ?? ""} onChange={(e) => setPicked(e.target.value)}
+                  className="max-w-[220px] cursor-pointer rounded-lg border border-black/[0.1] bg-white/80 py-1 pl-2.5 pr-7 text-[12px] font-semibold text-slate-600 outline-none focus:border-[#0078d4]">
+                  {filtered.map((p) => <option key={p.patientId} value={p.patientId}>{p.name} · {p.mrn}</option>)}
+                </select>
+              </div>
             </div>
-            <div className="mt-0.5 text-[12px] text-slate-500">58 Y · Male · MRN: CLN-00012345 · IPD: ICU-07</div>
+            <div className="mt-0.5 text-[12px] text-slate-500">{pt ? `${pt.age ?? "—"} Y · ${pt.gender ?? "—"} · MRN: ${pt.mrn ?? "—"} · ${pt.department}` : "58 Y · Male · MRN: CLN-00012345 · IPD: ICU-07"}</div>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-slate-500">
-              <span className="flex items-center gap-1"><Phone size={12} /> 0300-1234567</span>
-              <span className="text-slate-300">·</span><span>B+</span>
-              <span className="text-slate-300">·</span><span>Jubilee Health</span>
-              <span className="text-slate-300">·</span><span>ICU-07, Bed-01</span>
+              <span className="flex items-center gap-1"><Phone size={12} /> {pt?.mobile ?? "0300-1234567"}</span>
+              <span className="text-slate-300">·</span><span>{pt?.bloodGroup ?? "B+"}</span>
+              <span className="text-slate-300">·</span><span>{pt?.status ?? "Jubilee Health"}</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-4">
             <div>
-              <div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">Admitted On</div>
-              <div className="text-[12.5px] font-semibold text-slate-700">10 May 2024</div>
-              <div className="text-[10px] text-slate-400">09:30 AM</div>
+              <div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">Admitted / Arrival</div>
+              <div className="text-[12.5px] font-semibold text-slate-700">{pt?.admittedOn ?? "10 May 2024"}</div>
+              <div className="text-[10px] text-slate-400">{pt?.admittedTime ?? "09:30 AM"}</div>
             </div>
             <div>
               <div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">Attending Physician</div>
-              <div className="text-[12.5px] font-semibold text-slate-700">Dr. Ahmed Ali</div>
-              <div className="text-[10px] text-slate-400">Cardiology</div>
+              <div className="text-[12.5px] font-semibold text-slate-700">{pt?.attendingPhysician ?? "Dr. Ahmed Ali"}</div>
+              <div className="text-[10px] text-slate-400">{pt?.attendingDept ?? "Cardiology"}</div>
             </div>
             <div>
               <div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">Allergies</div>
-              <div className="text-[12.5px] font-semibold text-[#D13438]">Penicillin</div>
-              <div className="text-[10px] text-[#D13438]">Aspirin</div>
+              <div className="text-[12.5px] font-semibold text-[#D13438]">{allergyText[0] ?? "None"}</div>
+              <div className="text-[10px] text-[#D13438]">{allergyText.slice(1).join(", ")}</div>
             </div>
             <div>
-              <div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">Code Status</div>
-              <div className="flex items-center gap-1 text-[12.5px] font-semibold text-slate-700">Full Code <Pencil size={11} className="text-slate-400" /></div>
+              <div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">Encounter Status</div>
+              <div className="flex items-center gap-1 text-[12.5px] font-semibold text-slate-700">{pt?.status ?? "Full Code"}</div>
             </div>
           </div>
-          <button type="button" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-black/[0.07] bg-white/70 text-slate-400"><MoreHorizontal size={18} /></button>
+          <button type="button" aria-label="More options" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-black/[0.07] bg-white/70 text-slate-400"><MoreHorizontal size={18} /></button>
         </div>
       </div>
 
       {/* tabs */}
       <div className="flex gap-x-5 gap-y-1 overflow-x-auto border-b border-black/[0.07]">
         {PATIENT_TABS.map((t) => (
-          <button key={t} type="button" onClick={() => setTab(t)}
+          <button key={t} type="button" data-fn onClick={() => setTab(t)}
             className="relative shrink-0 whitespace-nowrap pb-2 text-[12.5px] font-semibold transition"
             style={{ color: tab === t ? "#0078d4" : "#6b7280" }}>
             {t}
@@ -1770,7 +1794,7 @@ function PatientsView() {
 
       {/* content */}
       <div>
-        {tab === "Overview" && <PatientOverview />}
+        {tab === "Overview" && <PatientOverview data={pt} />}
         {tab === "Timeline" && <TimelineTab />}
         {tab === "Vitals" && <VitalsTab />}
         {tab === "Labs" && <LabsTab />}
@@ -4075,7 +4099,7 @@ export default function CommandCenterOS() {
   const [draft, setDraft] = useState("");
   const [userMenu, setUserMenu] = useState(false);
   const [search, setSearch] = useState("");
-  const searchable = activeNav === "Billing" || activeNav === "Inventory" || activeNav === "Surgery / OT";
+  const searchable = activeNav === "Billing" || activeNav === "Inventory" || activeNav === "Surgery / OT" || activeNav === "Patients";
 
   const logout = () => {
     clearOsSession();
@@ -4240,7 +4264,7 @@ export default function CommandCenterOS() {
 
         {/* ------------------------------------------------------------- MAIN */}
         <main className="min-w-0 flex-1 overflow-y-auto px-5 py-4">
-          {activeNav === "Patients" ? <PatientsView /> : activeNav === "Admissions" ? <AdmissionsView /> : activeNav === "Care Team" ? <CareTeamView /> : activeNav === "Labs" ? <LabsView /> : activeNav === "Radiology" ? <RadiologyView /> : activeNav === "Pharmacy" ? <PharmacyView /> : activeNav === "Surgery / OT" ? <SurgeryView search={search} /> : activeNav === "Billing" ? <BillingView search={search} /> : activeNav === "Inventory" ? <InventoryView search={search} /> : activeNav === "ICU" ? <ICUView /> : activeNav === "Emergency" ? <EmergencyView /> : (
+          {activeNav === "Patients" ? <PatientsView search={search} /> : activeNav === "Admissions" ? <AdmissionsView /> : activeNav === "Care Team" ? <CareTeamView /> : activeNav === "Labs" ? <LabsView /> : activeNav === "Radiology" ? <RadiologyView /> : activeNav === "Pharmacy" ? <PharmacyView /> : activeNav === "Surgery / OT" ? <SurgeryView search={search} /> : activeNav === "Billing" ? <BillingView search={search} /> : activeNav === "Inventory" ? <InventoryView search={search} /> : activeNav === "ICU" ? <ICUView /> : activeNav === "Emergency" ? <EmergencyView /> : (
           <>
           {/* header */}
           <div className="mb-3 flex items-center justify-between">

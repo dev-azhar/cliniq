@@ -6,6 +6,7 @@
  * rendering (with placeholders) even while loading or if the backend is offline.
  */
 import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
 import { osAuthHeader } from "./osSession";
 
 export interface OsOverview {
@@ -108,6 +109,44 @@ export function useOsSurgery() {
     queryKey: ["os", "surgery"],
     queryFn: () => fetchJson<OsSurgery>("/api/v1/os/surgery"),
     refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+}
+
+export interface OsPatientListItem {
+  patientId: string; name: string; mrn: string | null; age: number | null;
+  gender: string | null; department: string; status: string | null;
+}
+
+export interface OsPatient {
+  patientId: string; name: string; mrn: string | null; age: number | null; gender: string | null;
+  bloodGroup: string | null; mobile: string | null; summary: string | null;
+  riskLevel: string; abnormalLabs: number; department: string; status: string | null;
+  admittedOn: string | null; admittedTime: string | null; attendingPhysician: string | null; attendingDept: string | null;
+  vitals: { bp: string | null; hr: number | null; spo2: number | null; temp: number | null; rr: number | null; capturedTs: string | null };
+  labs: { test: string; value: string; status: string; date: string }[];
+  medications: { name: string; dose: string }[];
+  problems: { name: string; onset: string | null }[];
+  allergies: { substance: string; severity: string | null }[];
+  encounters: { date: string; time: string; type: string; department: string; status: string }[];
+  careTeam: { name: string; role: string; badge: string }[];
+  generatedAt: string;
+}
+
+export function useOsPatients() {
+  return useQuery({
+    queryKey: ["os", "patients"],
+    queryFn: () => fetchJson<{ patients: OsPatientListItem[]; total: number }>("/api/v1/os/patients"),
+    staleTime: 30_000,
+  });
+}
+
+export function useOsPatient(patientId: string | null) {
+  return useQuery({
+    queryKey: ["os", "patient", patientId],
+    queryFn: () => fetchJson<OsPatient>(`/api/v1/os/patients/${patientId}`),
+    enabled: !!patientId,
+    placeholderData: keepPreviousData,
     staleTime: 15_000,
   });
 }

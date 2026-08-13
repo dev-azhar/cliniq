@@ -519,4 +519,131 @@ def surgery(db: Session = Depends(get_db), _claims: dict = Depends(require_os_st
     }
 
 
+_LAB_FLAG_LABEL = {"H": "High", "HH": "Critical High", "L": "Low", "LL": "Critical Low", "N": "Normal"}
+
+
+@router.get("/patients")
+def patients_list(q: str | None = None, db: Session = Depends(get_db), _claims: dict = Depends(require_os_staff)) -> dict:
+    """Directory of patients for the /os Patients picker."""
+    patients = db.scalars(select(models.Patient).order_by(models.Patient.created_at.desc())).all()
+    # Latest encounter per patient (single query, mapped in Python) for dept/status.
+    latest_enc: dict[str, models.Encounter] = {}
+    for e in db.scalars(select(models.Encounter).order_by(models.Encounter.arrival_ts.desc())):
+        latest_enc.setdefault(e.patient_id, e)
+    rows = []
+    for p in patients:
+        enc = latest_enc.get(p.patient_id)
+        rows.append({
+            "patientId": p.patient_id, "name": p.full_name, "mrn": p.mrn,
+            "age": p.age, "gender": p.gender,
+            "department": (enc.department if enc else None) or "—",
+            "status": enc.status if enc else None,
+        })
+    if q:
+        ql = q.strip().lower()
+        rows = [r for r in rows if ql in (r["name"] or "").lower() or ql in (r["mrn"] or "").lower()]
+    return {"patients": rows[:100], "total": len(rows)}
+
+
+@router.get("/patients/{patient_id}")
+def patient_overview(patient_id: str, db: Session = Depends(get_db), _claims: dict = Depends(require_os_staff)) -> dict:
+    """Full Patient 360 overview for the /os Patients profile — all sections."""
+    p = db.get(models.Patient, patient_id)
+    if p is None:
+        raise HTTPException(status_code=404, detail="Patient not found.")
+
+    encs = db.scalars(
+        select(models.Encounter).where(models.Encounter.patient_id == patient_id)
+        .order_by(models.Encounter.arrival_ts.desc()).limit(20)
+    ).all()
+    enc_ids = [e.encounter_id for e in encs]
+    latest = encs[0] if encs else None
+
+    vit = db.scalar(
+        select(models.Vitals).where(models.Vitals.encounter_id.in_(enc_ids or [""]))
+        .order_by(models.Vitals.captured_ts.desc())
+    ) if enc_ids else None
+
+    lab_rows = db.execute(
+        select(models.LabOrder, models.LabResult)
+        .join(models.LabResult, models.LabResult.lab_order_id == models.LabOrder.lab_order_id)
+        .where(models.LabOrder.patient_id == patient_id)
+        .order_by(models.LabResult.resulted_ts.desc()).limit(8)
+    ).all()
+    labs = []
+    abnormal = 0
+    for order, result in lab_rows:
+        flag = (result.abnormal_flag or "N").upper()
+        if flag not in ("N", ""):
+            abnormal += 1
+        val = f"{result.value:g} {result.unit or ''}".strip() if result.value is not None else "—"
+        labs.append({
+            "test": result.analyte or order.test_name or "Lab",
+            "value": val,
+            "status": _LAB_FLAG_LABEL.get(flag, "Normal"),
+            "date": (result.resulted_ts or order.ordered_ts).strftime("%d %b %Y, %I:%M %p"),
+        })
+
+    meds = [{"name": m.drug_name, "dose": m.dosage or "—"} for m in db.scalars(
+        select(models.PatientMedication).where(models.PatientMedication.patient_id == patient_id)
+        .where(models.PatientMedication.status == "ACTIVE").order_by(models.PatientMedication.created_ts.desc())
+    )]
+
+    problems = [{"name": i.issue_name, "onset": i.onset_info} for i in db.scalars(
+        select(models.PatientIssue).where(models.PatientIssue.patient_id == patient_id)
+        .where(models.PatientIssue.status == "ACTIVE").order_by(models.PatientIssue.created_ts.desc())
+    )]
+
+    allergies = [{"substance": a.substance, "severity": a.severity} for a in db.scalars(
+        select(models.Allergy).where(models.Allergy.patient_id == patient_id)
+    )]
+
+    encounters = [{
+        "date": e.arrival_ts.strftime("%d %b %Y"), "time": e.arrival_ts.strftime("%I:%M %p"),
+        "type": e.visit_type, "department": e.department or "—", "status": e.status,
+    } for e in encs[:6]]
+
+    doctor = db.get(models.Staff, latest.doctor_id) if latest and latest.doctor_id else None
+    care_team = []
+    if doctor:
+        care_team.append({"name": doctor.name, "role": doctor.specialty or doctor.department or "Attending", "badge": "Attending"})
+
+    risk = "High" if abnormal >= 3 else "Moderate" if abnormal >= 1 else "Low"
+
+    return {
+        "patientId": p.patient_id,
+        "name": p.full_name,
+        "mrn": p.mrn,
+        "age": p.age,
+        "gender": p.gender,
+        "bloodGroup": p.blood_group,
+        "mobile": p.mobile,
+        "summary": p.summary,
+        "riskLevel": risk,
+        "abnormalLabs": abnormal,
+        "department": (latest.department if latest else None) or "—",
+        "status": latest.status if latest else None,
+        "admittedOn": latest.arrival_ts.strftime("%d %b %Y") if latest else None,
+        "admittedTime": latest.arrival_ts.strftime("%I:%M %p") if latest else None,
+        "attendingPhysician": doctor.name if doctor else None,
+        "attendingDept": (doctor.specialty or doctor.department) if doctor else None,
+        "vitals": {
+            "bp": f"{vit.bp_systolic}/{vit.bp_diastolic}" if vit and vit.bp_systolic else None,
+            "hr": vit.heart_rate if vit else None,
+            "spo2": vit.spo2 if vit else None,
+            "temp": vit.temperature if vit else None,
+            "rr": vit.respiratory_rate if vit else None,
+            "capturedTs": vit.captured_ts.strftime("%d %b %Y, %I:%M %p") if vit else None,
+        },
+        "labs": labs,
+        "medications": meds,
+        "problems": problems,
+        "allergies": allergies,
+        "encounters": encounters,
+        "careTeam": care_team,
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+
 
