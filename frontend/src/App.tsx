@@ -21,6 +21,7 @@ const PharmacyWorkspace = lazy(() => import("./features/pharmacy/PharmacyWorkspa
 const OncologyWorkspace = lazy(() => import("./features/oncology/OncologyWorkspace"));
 const CommandCenterOS = lazy(() => import("./features/os/CommandCenterOS"));
 const LoginOS = lazy(() => import("./features/os/LoginOS"));
+const PatientPortal = lazy(() => import("./features/portal/PatientPortal"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="/" element={<Navigate to="/os/login" replace />} />
             <Route path="/os/login" element={<LoginOS />} />
             <Route path="/os" element={<CommandCenterOS />} />
+            <Route path="/portal" element={<PatientPortal />} />
             <Route
               path="/*"
               element={

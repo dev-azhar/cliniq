@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   HeartPulse, ShieldCheck, Network, Users, PieChart, User, Lock, Eye, EyeOff,
-  KeyRound, Globe, ChevronDown, Stethoscope, MoreHorizontal, Loader2, AlertCircle,
+  KeyRound, Globe, ChevronDown, Stethoscope, MoreHorizontal, Loader2, AlertCircle, HeartHandshake,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { osLoginRequest, setOsSession } from "./osSession";
@@ -11,7 +11,7 @@ const ROLES: { label: string; icon: ComponentType<{ size?: number | string }> }[
   { label: "Doctor", icon: Stethoscope },
   { label: "Nurse", icon: User },
   { label: "Admin", icon: ShieldCheck },
-  { label: "Other", icon: MoreHorizontal },
+  { label: "Patient", icon: HeartHandshake },
 ];
 
 const FEATURES = [
@@ -70,6 +70,11 @@ export default function LoginOS() {
 
   const signIn = async (creds: { username: string; password: string; role: string }) => {
     setError(null);
+    // Patients land on the patient portal (separate from the staff OS console).
+    if (creds.role === "Patient") {
+      navigate("/portal");
+      return;
+    }
     setLoading(true);
     try {
       const session = await osLoginRequest(creds);
