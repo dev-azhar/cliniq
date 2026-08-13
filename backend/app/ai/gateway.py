@@ -113,7 +113,8 @@ class ModelGateway:
         # --- Google Gemini Integration ---
         if settings.gemini_api_key:
             # Use gemini-flash-latest (points to Google's current active stable Flash model)
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={settings.gemini_api_key}"
+            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+            headers = {"x-goog-api-key": settings.gemini_api_key}
             payload = {
                 "contents": [
                     {
@@ -132,7 +133,7 @@ class ModelGateway:
                 payload["generationConfig"]["responseMimeType"] = "application/json"
 
             try:
-                resp = httpx.post(url, json=payload, timeout=self._timeout)
+                resp = httpx.post(url, json=payload, headers=headers, timeout=self._timeout)
                 resp.raise_for_status()
                 data = resp.json()
                 candidates = data.get("candidates") or []

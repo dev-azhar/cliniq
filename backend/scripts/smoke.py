@@ -23,7 +23,7 @@ def check(label: str, condition: bool, detail: str = "") -> None:
     print(f"  [{mark}] {label}{('  — ' + detail) if detail and not condition else ''}")
 
 
-print("\n=== Qconnect — end-to-end journey smoke test ===\n")
+print("\n=== ClinIQ — end-to-end journey smoke test ===\n")
 
 # 1) Check-in with ABHA
 r = client.post("/api/v1/checkin", json={"abha_number": "91-2345-6789-0123", "channel": "WHATSAPP",

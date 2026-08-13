@@ -1,8 +1,8 @@
 """
-Generate Qconnect executive pitch PDF using only Python stdlib (no external deps).
+Generate ClinIQ executive pitch PDF using only Python stdlib (no external deps).
 Produces a valid PDF 1.4 file with proper text layout, headers, and styling.
 Run: python3 generate_pdf.py
-Output: Qconnect_Executive_Pitch.pdf
+Output: ClinIQ_Executive_Pitch.pdf
 """
 
 import struct, zlib, time
@@ -269,7 +269,7 @@ class PageBuilder:
 # ---------------------------------------------------------------------------
 
 SPEECH = [
-    ("TITLE",  "Qconnect — Executive Pitch"),
+    ("TITLE",  "ClinIQ — Executive Pitch"),
     ("SUBTITLE", "3-Minute Product Speech  ·  Executive / Visionary"),
     ("LINE",),
     ("SPACER", 10),
@@ -287,12 +287,12 @@ SPEECH = [
      "coordination. It's the absence of a platform that is simultaneously intelligent, "
      "seamless, and — above all — safe. One that earns the trust of the patient, the "
      "clinician, and the regulator, all at once."),
-    ("BODY", "That's the problem Qconnect was built to solve."),
+    ("BODY", "That's the problem ClinIQ was built to solve."),
 
     ("SPACER", 10),
     ("SECTION", "The Platform"),
     ("BODY",
-     "Qconnect is a Smart Hospital Operating System — a real-time, AI-assisted platform "
+    "ClinIQ is a Smart Hospital Operating System — a real-time, AI-assisted platform "
      "that connects every role in the hospital: reception, triage, the consultation room, "
      "the lab, the pharmacy, and the patient on their phone — in one single, coordinated, "
      "and fully audited flow."),
@@ -328,7 +328,7 @@ SPEECH = [
 
     ("SUB", "Oncology — Lifetime of Care"),
     ("BODY",
-     "For complex oncology cases, Qconnect tracks cancer diagnoses, chemotherapy cycles, "
+    "For complex oncology cases, ClinIQ tracks cancer diagnoses, chemotherapy cycles, "
      "tumor board discussions, radiology and pathology reports, and long-term survivorship "
      "plans — so the platform holds not just a visit, but a lifetime of care."),
 
@@ -342,7 +342,7 @@ SPEECH = [
     ("BODY",
      "In healthcare, security is not a feature. It is the foundation."),
     ("BODY",
-     "Every action on Qconnect is recorded in a tamper-evident audit log — who did what, "
+    "Every action on ClinIQ is recorded in a tamper-evident audit log — who did what, "
      "to which patient, at what time, with what outcome. No record is ever silently changed. "
      "Every clinical write is tied to a verified identity. Every session is consent-gated — "
      "a patient's data cannot be accessed without an active, recorded consent artifact on file."),
@@ -366,41 +366,41 @@ SPEECH = [
     ("ITALIC",
      "Problem: Every department runs a disconnected system. One missed handoff and the patient is lost."),
     ("BODY",
-     "Qconnect: One encounter record follows the patient through every department. "
+    "ClinIQ: One encounter record follows the patient through every department. "
      "Nothing drops. Nothing is re-entered."),
 
     ("SUB", "2  |  Clinical Administration Consuming Doctor Time"),
     ("ITALIC",
      "Problem: Doctors spend up to 50% of their time on documentation, not patients."),
     ("BODY",
-     "Qconnect: Ambient SOAP drafts clinical notes automatically — offline, on-premise, "
+    "ClinIQ: Ambient SOAP drafts clinical notes automatically — offline, on-premise, "
      "with speaker diarization and noise suppression. Administration becomes attention."),
 
     ("SUB", "3  |  Patient Uncertainty and Disengagement"),
     ("ITALIC",
      "Problem: Patients sit in waiting rooms with no ETA, no status, no agency."),
     ("BODY",
-     "Qconnect: The Patient Dashboard updates every 5 seconds — queue position, lab results, "
+    "ClinIQ: The Patient Dashboard updates every 5 seconds — queue position, lab results, "
      "prescription, invoice — all on their phone."),
 
     ("SUB", "4  |  Data Security as an Afterthought"),
     ("ITALIC",
      "Problem: Patient audio streamed to external clouds. Records with no audit trail. Poorly enforced access."),
     ("BODY",
-     "Qconnect: All AI runs on-premise. Every action is audit-logged. Consent is enforced "
+    "ClinIQ: All AI runs on-premise. Every action is audit-logged. Consent is enforced "
      "at every data boundary. Built ABDM and data-protection compliant from day one."),
 
     ("SUB", "5  |  AI Overriding Human Judgment"),
     ("ITALIC",
      "Problem: Autonomous AI in clinical settings creates liability, erodes trust, and harms patients."),
     ("BODY",
-     "Qconnect: Every AI output is a draft, never a decision. A human approves every clinical "
+    "ClinIQ: Every AI output is a draft, never a decision. A human approves every clinical "
      "action before it touches the record. The AI removes friction. The human retains control. Always."),
 
     ("SPACER", 10),
     ("SECTION", "Ecosystem & Scale"),
     ("BODY",
-     "Qconnect speaks the language of the ecosystem — FHIR, ICD-10, and ABDM — connecting "
+    "ClinIQ speaks the language of the ecosystem — FHIR, ICD-10, and ABDM — connecting "
      "to the national digital-health fabric instead of standing apart from it. This isn't a "
      "point solution. It's a foundation — production-ready, battle-tested, and built to scale "
      "to the demands of a full enterprise hospital."),
@@ -417,7 +417,7 @@ SPEECH = [
      "One connected journey. Intelligent at every step. Secure at every layer. "
      "Human at every decision."),
     ("SPACER", 12),
-    ("TITLE_CLOSE", "That's Qconnect."),
+    ("TITLE_CLOSE", "That's ClinIQ."),
 ]
 
 PROBLEMS = []   # already embedded in SPEECH above
@@ -427,7 +427,7 @@ PROBLEMS = []   # already embedded in SPEECH above
 # Build
 # ---------------------------------------------------------------------------
 
-def build_pdf(output_path="Qconnect_Executive_Pitch.pdf"):
+def build_pdf(output_path="ClinIQ_Executive_Pitch.pdf"):
     pdf = PDF()
 
     # Allocate font objects manually before page tree
@@ -603,7 +603,7 @@ def build():
     )
     body += (xref + trailer).encode()
 
-    out = "Qconnect_Executive_Pitch.pdf"
+    out = "ClinIQ_Executive_Pitch.pdf"
     with open(out, "wb") as f:
         f.write(body)
     print(f"Done: {out}  ({len(body):,} bytes, {len(pdf.pages)} pages)")

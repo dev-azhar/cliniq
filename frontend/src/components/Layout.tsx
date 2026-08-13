@@ -5,22 +5,23 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity, HeartPulse, Stethoscope, ClipboardList, MonitorDot, MessageSquareHeart,
   Smartphone, BellRing, ShieldAlert, FlaskConical, Pill, Menu, PanelLeftClose,
-  Syringe, ChevronDown,
+  Syringe, ChevronDown, LogOut, LayoutGrid,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { useJourney } from "../lib/store";
 import { useRealtime, useRealtimeConnection, LiveEvent } from "../lib/realtime";
+import { getPortalPatient, clearPortalPatient } from "../lib/patientAuth";
 
 const NAV = [
-  { to: "/", label: "Home", icon: Activity, end: true },
-  { to: "/triage", label: "Triage Desk", icon: HeartPulse, roles: ["nurse"] },
-  { to: "/copilot", label: "Doctor Workspace", icon: Stethoscope, roles: ["doctor"] },
-  { to: "/oncology", label: "Oncology & Cancer Care", icon: Syringe, roles: ["doctor"] },
-  { to: "/lab", label: "Lab Workspace", icon: FlaskConical, roles: ["lab"] },
-  { to: "/pharmacy", label: "Pharmacy Desk", icon: Pill, roles: ["pharmacist"] },
-  { to: "/reception", label: "Reception Desk", icon: ClipboardList, roles: ["receptionist"] },
-  { to: "/command", label: "Command Center", icon: MonitorDot, roles: ["admin"] },
-  { to: "/admin", label: "Admin Workspace", icon: ShieldAlert, roles: ["admin"] },
+  { to: "/", label: "Home", icon: Activity, color: "#0078D4", end: true },
+  { to: "/triage", label: "Triage Desk", icon: HeartPulse, color: "#D13438", roles: ["nurse"] },
+  { to: "/copilot", label: "Doctor Workspace", icon: Stethoscope, color: "#038387", roles: ["doctor"] },
+  { to: "/oncology", label: "Oncology & Cancer Care", icon: Syringe, color: "#8764B8", roles: ["doctor"] },
+  { to: "/lab", label: "Lab Workspace", icon: FlaskConical, color: "#107C10", roles: ["lab"] },
+  { to: "/pharmacy", label: "Pharmacy Desk", icon: Pill, color: "#CA5010", roles: ["pharmacist"] },
+  { to: "/reception", label: "Reception Desk", icon: ClipboardList, color: "#4F6BED", roles: ["receptionist"] },
+  { to: "/command", label: "Command Center", icon: MonitorDot, color: "#004E8C", roles: ["admin"] },
+  { to: "/admin", label: "Admin Workspace", icon: ShieldAlert, color: "#5C2E91", roles: ["admin"] },
 ];
 
 function criticalText(e: LiveEvent): string {
@@ -60,6 +61,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const connected = useRealtime((s) => s.connected);
   const [sidebarOpen, setSidebarOpen] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
   const [patientMenuOpen, setPatientMenuOpen] = useState(() => loc.pathname.startsWith("/patient"));
+  const [appsOpen, setAppsOpen] = useState(false);
 
   const activeRole = journey.activeRole;
 
@@ -113,11 +115,11 @@ export default function Layout({ children }: { children: ReactNode }) {
           </button>
           <button type="button" className="flex min-w-0 items-center gap-2.5 text-left" onClick={() => nav("/")} aria-label="Go to home">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
-              style={{ background: "linear-gradient(150deg,var(--cyan),var(--violet))", boxShadow: "0 0 18px rgba(37,100,207,.5)" }}>
+              style={{ background: "linear-gradient(150deg,#3a96e0,#0078d4)", boxShadow: "0 6px 14px rgba(0,120,212,.24)" }}>
               <HeartPulse size={18} color="#ffffff" />
             </span>
             <span className="hidden min-[470px]:block">
-              <span className="grad-text block text-[15px] font-extrabold leading-tight">Qconnect</span>
+              <span className="grad-text block text-[15px] font-extrabold leading-tight">ClinIQ</span>
               <span className="block text-[10px] text-[var(--dim)]">Smart Hospital OS</span>
             </span>
           </button>
@@ -128,6 +130,16 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
         <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => setAppsOpen((o) => !o)}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border text-[var(--muted)] transition hover:border-[var(--line2)] hover:bg-black/5 hover:text-[var(--ink)]"
+            style={{ borderColor: "var(--glass-border)" }}
+            aria-label="App launcher"
+            aria-expanded={appsOpen}
+          >
+            <LayoutGrid size={18} />
+          </button>
           <span className="flex shrink-0 items-center gap-1.5 text-[10px] font-bold sm:text-[11px]"
             style={{ color: connected ? "#15803d" : "#92400e" }}>
             <span className="inline-block h-2 w-2 rounded-full"
@@ -136,6 +148,39 @@ export default function Layout({ children }: { children: ReactNode }) {
           </span>
         </div>
       </header>
+
+      {appsOpen && (
+        <>
+          <button type="button" className="fixed inset-0 z-40 cursor-default" onClick={() => setAppsOpen(false)} aria-label="Close app launcher" />
+          <div className="fixed right-3 top-[68px] z-50 w-[300px] p-3 sm:right-5 lg:right-6"
+            role="menu" aria-label="App launcher"
+            style={{
+              borderRadius: 16,
+              border: "1px solid rgba(255,255,255,.65)",
+              background: "linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.78))",
+              backdropFilter: "blur(30px) saturate(180%)",
+              WebkitBackdropFilter: "blur(30px) saturate(180%)",
+              boxShadow: "0 30px 70px rgba(2,32,71,.28), inset 0 1px 0 rgba(255,255,255,.9)",
+            }}>
+            <div className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: "var(--dim)" }}>Apps</div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {NAV.map((a) => (
+                <button
+                  key={a.to}
+                  type="button"
+                  onClick={() => { nav(a.to); setAppsOpen(false); closeSidebarOnMobile(); }}
+                  className="flex flex-col items-center gap-1.5 rounded-xl p-2.5 text-center transition hover:bg-black/[0.04]"
+                >
+                  <span className="grid h-10 w-10 place-items-center rounded-lg" style={{ background: a.color, boxShadow: `0 4px 10px ${a.color}30` }}>
+                    <a.icon size={18} color="#ffffff" />
+                  </span>
+                  <span className="text-[11px] font-semibold leading-tight" style={{ color: "var(--ink)" }}>{a.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {sidebarOpen && <button type="button" className="fixed inset-x-0 bottom-0 top-16 z-10 bg-black/55 lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="Close navigation" />}
 
@@ -151,12 +196,12 @@ export default function Layout({ children }: { children: ReactNode }) {
             <NavLink to={n.to} end={n.end} onClick={closeSidebarOnMobile}
               className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13.5px] font-semibold transition"
               style={({ isActive }: any) => ({
-                color: isActive ? "#123a7a" : "var(--muted)",
-                background: isActive ? "linear-gradient(90deg, rgba(37,100,207,.14), rgba(26,79,180,.14))" : "transparent",
-                border: isActive ? "1px solid var(--line2)" : "1px solid transparent",
-                boxShadow: isActive ? "0 0 14px rgba(37,100,207,.12)" : "none",
+                color: isActive ? "#004578" : "var(--muted)",
+                background: isActive ? "rgba(0,120,212,.12)" : "transparent",
+                border: "1px solid transparent",
+                boxShadow: isActive ? "inset 3px 0 0 #0078d4" : "none",
               })}>
-              <n.icon size={17} />
+              <n.icon size={17} color={n.color} />
               {n.label}
             </NavLink>
 
@@ -167,15 +212,16 @@ export default function Layout({ children }: { children: ReactNode }) {
                   onClick={() => setPatientMenuOpen((open) => !open)}
                   className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13.5px] font-semibold transition"
                   style={{
-                    color: loc.pathname.startsWith("/patient") ? "#123a7a" : "var(--muted)",
+                    color: loc.pathname.startsWith("/patient") ? "#2b7fd0" : "var(--muted)",
                     background: loc.pathname.startsWith("/patient")
-                      ? "linear-gradient(90deg, rgba(37,100,207,.14), rgba(26,79,180,.14))"
+                      ? "rgba(0,120,212,.12)"
                       : "transparent",
-                    border: loc.pathname.startsWith("/patient") ? "1px solid var(--line2)" : "1px solid transparent",
+                    border: "1px solid transparent",
+                    boxShadow: loc.pathname.startsWith("/patient") ? "inset 3px 0 0 #0078d4" : "none",
                   }}
                   aria-expanded={patientMenuOpen}
                 >
-                  <Smartphone size={17} />
+                  <Smartphone size={17} color="#0078D4" />
                   <span className="flex-1">Patient Portal</span>
                   <ChevronDown size={15} className={`transition-transform ${patientMenuOpen ? "rotate-180" : ""}`} />
                 </button>
@@ -184,14 +230,29 @@ export default function Layout({ children }: { children: ReactNode }) {
                   <div className="ml-5 mt-1 space-y-1 border-l border-[var(--line)] pl-2">
                     <NavLink to="/patient" end onClick={closeSidebarOnMobile}
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-[12.5px] font-semibold transition"
-                      style={({ isActive }) => ({ color: isActive ? "#123a7a" : "var(--muted)", background: isActive ? "rgba(37,100,207,.1)" : "transparent" })}>
+                      style={({ isActive }) => ({ color: isActive ? "#004578" : "var(--muted)", background: isActive ? "rgba(0,120,212,.1)" : "transparent" })}>
                       <Smartphone size={15} /> Dashboard
                     </NavLink>
                     <NavLink to="/patient/checkin" onClick={closeSidebarOnMobile}
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-[12.5px] font-semibold transition"
-                      style={({ isActive }) => ({ color: isActive ? "#123a7a" : "var(--muted)", background: isActive ? "rgba(37,100,207,.1)" : "transparent" })}>
+                      style={({ isActive }) => ({ color: isActive ? "#004578" : "var(--muted)", background: isActive ? "rgba(0,120,212,.1)" : "transparent" })}>
                       <MessageSquareHeart size={15} /> Check-in
                     </NavLink>
+                    {getPortalPatient() && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          clearPortalPatient();
+                          journey.reset();
+                          setPatientMenuOpen(false);
+                          closeSidebarOnMobile();
+                          nav("/patient/login?redirect=/patient", { replace: true });
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[12.5px] font-semibold text-rose-700 transition hover:bg-rose-50"
+                      >
+                        <LogOut size={15} /> Log out
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -202,7 +263,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="mt-auto space-y-2">
           {journey.patientName && (
             <div className="card p-3 text-[12px] relative group">
-              <div className="mb-1 flex items-center justify-between font-bold" style={{ color: "#123a7a" }}>
+              <div className="mb-1 flex items-center justify-between font-bold" style={{ color: "#2b7fd0" }}>
                 <span className="flex items-center gap-1"><ClipboardList size={13} /> Active Session</span>
                 <button
                   onClick={() => journey.reset()}

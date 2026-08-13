@@ -3,20 +3,21 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight, HeartPulse, Stethoscope, Syringe, FlaskConical, ClipboardList,
   Pill, MonitorDot, ShieldAlert, MessageSquareHeart, ChevronRight,
+  Users, Timer, ListChecks,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { Card, Metric } from "../components/ui";
 
 const WORKSPACES = [
-  { to: "/patient/checkin", label: "Patient Check-in", icon: MessageSquareHeart, desc: "Start a new visit via WhatsApp-style self check-in." },
-  { to: "/triage", label: "Triage Desk", icon: HeartPulse, desc: "Nurse-led vitals capture and ESI-based prioritization." },
-  { to: "/copilot", label: "Doctor Workspace", icon: Stethoscope, desc: "Consult queue, AI-assisted notes and prescriptions." },
-  { to: "/oncology", label: "Oncology & Cancer Care", icon: Syringe, desc: "Diagnosis staging, chemotherapy and tumor board tracking." },
-  { to: "/lab", label: "Lab Workspace", icon: FlaskConical, desc: "Order intake, sample collection and result entry." },
-  { to: "/reception", label: "Reception Desk", icon: ClipboardList, desc: "Appointments, registration and front-desk operations." },
-  { to: "/pharmacy", label: "Pharmacy Desk", icon: Pill, desc: "Prescription verification and medication dispensing." },
-  { to: "/command", label: "Command Center", icon: MonitorDot, desc: "Hospital-wide operational and compliance overview." },
-  { to: "/admin", label: "Admin Workspace", icon: ShieldAlert, desc: "Staff, departments and platform configuration." },
+  { to: "/patient/checkin", label: "Patient Check-in", icon: MessageSquareHeart, color: "#0078D4", desc: "Start a new visit via WhatsApp-style self check-in." },
+  { to: "/triage", label: "Triage Desk", icon: HeartPulse, color: "#D13438", desc: "Nurse-led vitals capture and ESI-based prioritization." },
+  { to: "/copilot", label: "Doctor Workspace", icon: Stethoscope, color: "#038387", desc: "Consult queue, AI-assisted notes and prescriptions." },
+  { to: "/oncology", label: "Oncology & Cancer Care", icon: Syringe, color: "#8764B8", desc: "Diagnosis staging, chemotherapy and tumor board tracking." },
+  { to: "/lab", label: "Lab Workspace", icon: FlaskConical, color: "#107C10", desc: "Order intake, sample collection and result entry." },
+  { to: "/reception", label: "Reception Desk", icon: ClipboardList, color: "#4F6BED", desc: "Appointments, registration and front-desk operations." },
+  { to: "/pharmacy", label: "Pharmacy Desk", icon: Pill, color: "#CA5010", desc: "Prescription verification and medication dispensing." },
+  { to: "/command", label: "Command Center", icon: MonitorDot, color: "#004E8C", desc: "Hospital-wide operational and compliance overview." },
+  { to: "/admin", label: "Admin Workspace", icon: ShieldAlert, color: "#5C2E91", desc: "Staff, departments and platform configuration." },
 ];
 
 export default function Home() {
@@ -28,7 +29,7 @@ export default function Home() {
       {/* Hero */}
       <Card className="overflow-hidden !p-0">
         <div className="relative px-8 py-10"
-          style={{ background: "radial-gradient(760px 320px at 20% -30%, rgba(37,100,207,.22), transparent 62%), radial-gradient(700px 320px at 100% 120%, rgba(26,79,180,.20), transparent 60%)" }}>
+          style={{ background: "radial-gradient(760px 320px at 20% -30%, rgba(0,120,212,.18), transparent 62%), radial-gradient(700px 320px at 100% 120%, rgba(0,69,120,.14), transparent 60%)" }}>
           <div className="text-[12px] font-extrabold uppercase tracking-[0.34em]" style={{ color: "var(--cyan)" }}>
             Next-Gen Clinical OS
           </div>
@@ -50,21 +51,21 @@ export default function Home() {
       {/* Live snapshot */}
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-lg font-extrabold" style={{ color: "#0c3b63" }}>Live hospital snapshot</h2>
+          <h2 className="text-lg font-extrabold" style={{ color: "#2b7fd0" }}>Live hospital snapshot</h2>
           <span className="live">LIVE</span>
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Metric value={m?.headline?.patients_today ?? "—"} label="Patients today" />
-          <Metric value={m ? `${m.headline.door_to_doctor_min}m` : "—"} label="Door-to-doctor" />
-          <Metric value={m?.headline?.in_queue ?? "—"} label="In queue" />
-          <Metric value={m?.headline?.compliance_gaps ?? "—"} label="Compliance gaps" />
+          <Metric value={m?.headline?.patients_today ?? "—"} label="Patients today" icon={Users} accent="#0078D4" />
+          <Metric value={m ? `${m.headline.door_to_doctor_min}m` : "—"} label="Door-to-doctor" icon={Timer} accent="#038387" />
+          <Metric value={m?.headline?.in_queue ?? "—"} label="In queue" icon={ListChecks} accent="#CA5010" />
+          <Metric value={m?.headline?.compliance_gaps ?? "—"} label="Compliance gaps" icon={ShieldAlert} accent="#D13438" />
         </div>
       </div>
 
       {/* Workspaces */}
       <div>
         <div className="mb-2">
-          <h2 className="text-lg font-extrabold" style={{ color: "#0c3b63" }}>Explore workspaces</h2>
+          <h2 className="text-lg font-extrabold" style={{ color: "#2b7fd0" }}>Explore workspaces</h2>
           <p className="text-[13px]" style={{ color: "var(--muted)" }}>
             Jump straight into any role-based workspace across the patient journey.
           </p>
@@ -75,11 +76,12 @@ export default function Home() {
               key={w.to}
               type="button"
               onClick={() => nav(w.to)}
-              className="card flex items-start gap-3 text-left transition hover:-translate-y-0.5 hover:border-[var(--line2)]"
+              className="card relative flex items-start gap-3.5 overflow-hidden text-left transition"
             >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-                style={{ background: "linear-gradient(150deg,var(--cyan),var(--violet))", boxShadow: "0 0 14px rgba(37,100,207,.35)" }}>
-                <w.icon size={18} color="#ffffff" />
+              <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: w.color }} />
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg"
+                style={{ background: w.color, boxShadow: `0 4px 10px ${w.color}30` }}>
+                <w.icon size={20} color="#ffffff" strokeWidth={2} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center justify-between gap-2">

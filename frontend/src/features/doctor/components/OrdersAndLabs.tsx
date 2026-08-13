@@ -116,7 +116,7 @@ export default function OrdersAndLabs({ encounterId, sel, setSel, doctorName }: 
     <div className="grid gap-3 lg:grid-cols-[340px_1fr] animate-in fade-in duration-300">
       <div>
         <Card>
-          <div className="flex items-center justify-between font-bold" style={{ color: "#123a7a" }}>
+          <div className="flex items-center justify-between font-bold" style={{ color: "#004578" }}>
             <span>CPOE Diagnostic Catalog</span>
             <AgentBadge label="Order Sets" />
           </div>

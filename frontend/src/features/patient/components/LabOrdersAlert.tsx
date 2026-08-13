@@ -279,7 +279,7 @@ export default function LabOrdersAlert({
                     onClick={() => setSelectedSlot(timeStr)}
                     className={`lab-orders-alert__slot btn text-xs shrink-0 py-1 px-3 border transition-all ${
                       active 
-                        ? "lab-orders-alert__slot--active border-[var(--cyan)] bg-[rgba(37,100,207,0.15)]"
+                        ? "lab-orders-alert__slot--active border-[var(--cyan)] bg-[rgba(0,120,212,0.15)]"
                         : booked
                           ? "lab-orders-alert__slot--booked line-through cursor-not-allowed"
                           : "lab-orders-alert__slot--available"

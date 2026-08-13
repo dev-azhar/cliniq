@@ -158,7 +158,25 @@ def list_notes(encounter_id: str, db: Session = Depends(get_db)) -> list[dict]:
              "icd10": n.icd10_codes, "approved_by": n.approved_by} for n in notes]
 
 
-# --------------------------------------------------------------------------------- Lab orders (CPOE)
+# ---- Translate clinical text (SOAP, transcript) to target language
+@router.post("/translate")
+def translate_text(body: dict) -> dict:
+    """Translate clinical text to a target language.
+    
+    Request body: {"text": str, "target_language": str}
+    Response: {"translated_text": str, "translated": bool}
+    """
+    text = body.get("text", "")
+    target_language = body.get("target_language", "English")
+    
+    if not text or not target_language:
+        raise HTTPException(400, "Missing text or target_language")
+    
+    result = agents.translate_agent(text, target_language)
+    return result
+
+
+# ---- Lab orders (CPOE)
 @router.post("/lab-orders")
 def create_lab_orders(body: LabOrderRequest, db: Session = Depends(get_db)) -> dict:
     encounter = _encounter(db, body.encounter_id)

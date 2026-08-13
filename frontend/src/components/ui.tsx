@@ -1,4 +1,4 @@
-import { ReactNode, CSSProperties } from "react";
+import { ReactNode, CSSProperties, ComponentType } from "react";
 
 export function Card({ children, className = "", style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
   return <div className={`card ${className}`} style={style}>{children}</div>;
@@ -71,9 +71,15 @@ export function DeviceBar({ url, right }: { url?: string; right?: ReactNode }) {
   );
 }
 
-export function Metric({ value, label }: { value: ReactNode; label: string }) {
+export function Metric({ value, label, icon: Icon, accent }: { value: ReactNode; label: string; icon?: ComponentType<{ size?: number | string }>; accent?: string }) {
   return (
     <div className="metric">
+      {accent && <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: accent }} />}
+      {Icon && accent && (
+        <span className="mx-auto mb-2 grid h-9 w-9 place-items-center rounded-lg" style={{ background: `${accent}1a`, color: accent }}>
+          <Icon size={18} />
+        </span>
+      )}
       <div className="v">{value}</div>
       <div className="l">{label}</div>
     </div>

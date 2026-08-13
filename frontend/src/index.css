@@ -691,9 +691,9 @@ a {
 /* ============================================================= Aarogya light theme */
 :root {
   color-scheme: light;
-  --logo-primary: #0b787a;
-  --action-primary: #37b5b1;
-  --bg-secondary-light: #cfefef;
+  --logo-primary: #004578;
+  --action-primary: #0078d4;
+  --bg-secondary-light: #dcecf9;
   --status-good-green: #277154;
   --status-warning-green: #2da95b;
   --status-pending-purple: #5655a0;
@@ -707,11 +707,11 @@ a {
   --panel2: #f9fafb;
   --line: #e5e7eb;
   --line2: #d1d5db;
-  --cyan: #37b5b1;
-  --blue: #0b787a;
+  --cyan: #0078d4;
+  --blue: #004578;
   --violet: #5655a0;
   --glass-border: #e5e7eb;
-  --lit: rgba(55,181,177,.45);
+  --lit: rgba(0,120,212,.45);
   --shadow: 0 4px 16px rgba(15,23,42,.06);
   --glow-c: none;
 }
@@ -719,7 +719,7 @@ a {
 body {
   color: #1f2937;
   font-family: Inter, "Segoe UI", system-ui, sans-serif;
-  background: radial-gradient(1000px 540px at 8% -8%, rgba(207,239,239,.8), transparent 70%), #f9fafb;
+  background: radial-gradient(1000px 540px at 8% -8%, rgba(220,236,249,.8), transparent 70%), #f9fafb;
 }
 body::before { opacity: .1; }
 
@@ -734,18 +734,18 @@ body::before { opacity: .1; }
 
 .btn {
   color: #fff;
-  background: #37b5b1;
+  background: #0078d4;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(55,181,177,.2);
+  box-shadow: 0 4px 12px rgba(0,120,212,.2);
 }
-.btn:hover { color: #fff; background: #0b787a; filter: none; }
+.btn:hover { color: #fff; background: #004578; filter: none; }
 .btn.ghost {
-  color: #37b5b1;
+  color: #0078d4;
   background: #fff;
-  border: 1px solid rgba(55,181,177,.48);
+  border: 1px solid rgba(0,120,212,.48);
   box-shadow: 0 1px 3px rgba(15,23,42,.05);
 }
-.btn.ghost:hover { color: #0b787a; background: rgba(207,239,239,.28); }
+.btn.ghost:hover { color: #004578; background: rgba(220,236,249,.28); }
 .btn:disabled { color: #6b7280; background: #f3f4f6; box-shadow: none; }
 
 .input {
@@ -754,7 +754,7 @@ body::before { opacity: .1; }
   border: 1px solid #d1d5db !important;
   border-radius: 10px;
 }
-.input:focus { border-color: #37b5b1 !important; box-shadow: 0 0 0 3px rgba(55,181,177,.2); }
+.input:focus { border-color: #0078d4 !important; box-shadow: 0 0 0 3px rgba(0,120,212,.2); }
 select option { color: #1f2937 !important; background: #fff !important; }
 
 .tag.red { color: #b91c1c; background: #fdecec; border-color: #fecaca; }
@@ -762,7 +762,7 @@ select option { color: #1f2937 !important; background: #fff !important; }
 .tag.green { color: #277154; background: rgba(39,113,84,.1); border-color: rgba(39,113,84,.22); }
 .tag.blue { color: #1d4ed8; background: #eaf1fb; border-color: #bfdbfe; }
 .tag.violet { color: #5655a0; background: rgba(86,85,160,.1); border-color: rgba(86,85,160,.22); }
-.tag.cyan { color: #0b787a; background: rgba(207,239,239,.62); border-color: #cfefef; }
+.tag.cyan { color: #004578; background: rgba(220,236,249,.62); border-color: #dcecf9; }
 .tag.gray { color: #4b5563; background: #f3f4f6; border-color: #e5e7eb; }
 .success-message {
   color: #10b981 !important;
@@ -785,8 +785,8 @@ select option { color: #1f2937 !important; background: #fff !important; }
   border-color: #d1d5db !important;
 }
 .doctor-workspace .ai-summary-card {
-  background: linear-gradient(135deg, #fff, rgba(207,239,239,.55)) !important;
-  border-color: #cfefef !important;
+  background: linear-gradient(135deg, #fff, rgba(220,236,249,.55)) !important;
+  border-color: #dcecf9 !important;
 }
 
 .ai-badge { color: #4b5563; background: #f3f4f6; border: 1px solid #e5e7eb; box-shadow: none; }
@@ -798,7 +798,7 @@ select option { color: #1f2937 !important; background: #fff !important; }
 }
 .holo b, .kv b, .chip { color: #1f2937; }
 .grad-text {
-  background: linear-gradient(92deg, #0b787a, #37b5b1);
+  background: linear-gradient(92deg, #004578, #0078d4);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -813,12 +813,12 @@ main .card [class*="bg-slate-950"] { background-color: #f9fafb !important; }
 main [class*="border-white/"] { border-color: #e5e7eb !important; }
 main [class*="bg-white/"] { background-color: rgba(249,250,251,.9) !important; }
 
-.token-highlight { border-color: #cfefef !important; background: linear-gradient(135deg,#fff,#cfefef) !important; box-shadow: 0 6px 18px rgba(11,120,122,.08) !important; }
+.token-highlight { border-color: #dcecf9 !important; background: linear-gradient(135deg,#fff,#dcecf9) !important; box-shadow: 0 6px 18px rgba(0,69,120,.08) !important; }
 .device, .metric, .subsection, .appointment-time-slot { color: #1f2937; background: #fff !important; border-color: #e5e7eb !important; box-shadow: var(--shadow) !important; }
 .device .bar { color: #6b7280; background: #f9fafb; border-color: #e5e7eb; }
 .metric .v { background: none; color: #1f2937; }
 .alertbox { color: #b91c1c; background: #fdecec; box-shadow: none; }
-.ring { box-shadow: 0 4px 14px rgba(11,120,122,.12); }
+.ring { box-shadow: 0 4px 14px rgba(0,69,120,.12); }
 .ring i { color: #1f2937; background: #fff; }
 
 table { color: #1f2937; background: #fff; }
@@ -832,7 +832,7 @@ th, td { border-color: #e5e7eb !important; }
 
 .app-header { color: #1f2937; background: rgba(255,255,255,.95) !important; border-color: #e5e7eb !important; box-shadow: 0 1px 3px rgba(15,23,42,.05); }
 .app-header select { color: #1f2937 !important; }
-.brand-mark { background: #0b787a !important; box-shadow: 0 4px 12px rgba(11,120,122,.18) !important; }
+.brand-mark { background: #004578 !important; box-shadow: 0 4px 12px rgba(0,69,120,.18) !important; }
 .connection-pill { padding: .3rem .55rem; border-radius: 999px; color: #277154 !important; background: rgba(39,113,84,.1); }
 
 .app-sidebar {
@@ -842,10 +842,10 @@ th, td { border-color: #e5e7eb !important; }
   box-shadow: 4px 0 18px rgba(15,23,42,.035);
 }
 .app-sidebar a, .app-sidebar > button { color: #6b7280 !important; }
-.app-sidebar a[aria-current="page"] { color: #37b5b1 !important; background: rgba(55,181,177,.1) !important; border-color: transparent !important; box-shadow: none !important; }
+.app-sidebar a[aria-current="page"] { color: #0078d4 !important; background: rgba(0,120,212,.1) !important; border-color: transparent !important; box-shadow: none !important; }
 .app-sidebar .card { background: #f9fafb !important; box-shadow: none !important; }
 .app-sidebar .card [style] { color: inherit !important; }
-.ai-summary-card { background: rgba(207,239,239,.24) !important; border-color: #cfefef !important; }
+.ai-summary-card { background: rgba(220,236,249,.24) !important; border-color: #dcecf9 !important; }
 
 dialog, [role="dialog"] .card, .modal-overlay .card { color: #1f2937; background: #fff !important; border-color: #e5e7eb !important; box-shadow: 0 20px 50px rgba(15,23,42,.16) !important; }
 .card [class*="bg-slate-9"], .card [class*="bg-black/"] { background-color: #f9fafb !important; }
@@ -862,3 +862,351 @@ dialog, [role="dialog"] .card, .modal-overlay .card { color: #1f2937; background
 .light-modal-panel [class*="bg-slate-9"],
 .light-modal-panel [class*="bg-white/"] { background-color: #f9fafb !important; }
 .light-modal-panel .profile-value { color: #1f2937 !important; }
+
+/* ============================================================= Enterprise polish
+   Final cohesive refinement layer — appended last so it wins the cascade over the
+   theme block above. Sharpens typography, standardises elevation + focus, and gives
+   buttons / inputs / tables / interactive cards a premium, consistent feel. Accent
+   is Microsoft Fluent communication-blue (--cyan #0078d4 / --blue #004578). */
+
+/* Point the decorative gradient stop at the brand teal-dark so every
+   `linear-gradient(--cyan, --violet)` tile (logo, avatars, stage dots, login
+   shield, payment tiles, gauges) matches the brand instead of reading indigo.
+   `.tag.violet` uses a literal colour, so the violet status tag is unaffected. */
+:root { --violet: #004578; }
+
+/* Crisper text rendering everywhere */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* More deliberate, tighter headings */
+h1, h2, h3, h4, .grad-text, .grad-text-page {
+  letter-spacing: -0.018em;
+}
+
+/* Page-level gradient headings: navy -> Microsoft-blue ramp so large titles stay
+   dark/legible but end on the brand accent. */
+.grad-text-page {
+  background: linear-gradient(92deg, #14213d, #0078d4 72%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+/* Numeric data aligns in columns (metrics, key-values, tables, gauges) */
+.metric .v,
+.kv b,
+table,
+.ring i {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Consistent two-step elevation + smooth transitions on every surface */
+.card,
+.glass {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.06) !important;
+  transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+
+/* Clickable cards (rendered as <button class="card"> / <a class="card">) lift on hover */
+button.card:hover,
+a.card:hover {
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06), 0 14px 30px rgba(0,69,120, 0.12) !important;
+  border-color: rgba(0,120,212, 0.45) !important;
+  transform: translateY(-2px);
+}
+
+/* Buttons: smoother feedback, a real press state, and an accessible focus ring */
+.btn {
+  transition: background-color 0.16s ease, box-shadow 0.16s ease, transform 0.12s ease, filter 0.16s ease;
+}
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0,69,120, 0.22);
+  filter: brightness(0.97);
+}
+.btn:focus-visible {
+  outline: 2px solid #0078d4;
+  outline-offset: 2px;
+}
+.btn.ghost:focus-visible { outline-color: #004578; }
+
+/* Inputs: refined focus, softer placeholder, smooth transition */
+.input,
+input,
+textarea,
+select {
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.input::placeholder,
+input::placeholder,
+textarea::placeholder { color: #9ca3af; }
+
+/* Tables: quiet uppercase header, subtle row hover */
+thead th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+tbody tr { transition: background-color 0.14s ease; }
+tbody tr:hover { background: rgba(0,120,212, 0.06) !important; }
+
+/* Keep the active tab pill's glow on-brand (teal, not royal blue) */
+.tab-pill.is-active {
+  box-shadow: 0 6px 16px rgba(0,69,120, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Selection + scrollbar aligned to the teal brand */
+::selection { background: rgba(0,120,212, 0.24); color: #002848; }
+::-webkit-scrollbar-thumb { background: rgba(0,120,212, 0.34); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,69,120, 0.5); }
+
+/* App-wide keyboard-focus visibility for links + chrome controls (a11y) */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid #0078d4;
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+/* ===================================================== Fluent 2 refinement (Microsoft design lens)
+   Layers Microsoft Fluent design tokens on top of the teal brand: a neutral layered
+   depth ramp, a crisper radius scale, Segoe-first type, the Fluent field bottom-stroke,
+   Fluent focus stroke, and flat (no-lift) button interaction. Microsoft communication-blue
+   accent (#0078d4 rest / #106ebe hover / #004578 pressed) with Fluent depth + geometry. */
+:root {
+  /* Fluent neutral elevation ramp (ambient + directional, black-based) */
+  --shadow-2: 0 0 2px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.14);
+  --shadow-4: 0 0 2px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.14);
+  --shadow-8: 0 0 2px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.14);
+  --shadow-16: 0 0 2px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.14);
+  --shadow-28: 0 0 8px rgba(0, 0, 0, 0.12), 0 14px 28px rgba(0, 0, 0, 0.14);
+  --fluent-ease: cubic-bezier(0.33, 0, 0.67, 1);
+  --accent: #0078d4;
+  --accent-hover: #106ebe;
+  --accent-pressed: #004578;
+}
+
+/* Segoe-first type for authentic Fluent rendering on Windows (Inter fallback elsewhere) */
+body {
+  font-family: "Segoe UI Variable Text", "Segoe UI", Inter, Roboto, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Crisper Fluent radius scale — restrained, architectural geometry */
+.card,
+.glass,
+.metric,
+.device { border-radius: 8px !important; }
+.btn,
+.input,
+input,
+textarea,
+select { border-radius: 6px !important; }
+.chip,
+.holo,
+.subsection,
+.alertbox,
+.bubble { border-radius: 6px !important; }
+
+/* Fluent neutral depth: surfaces rest at depth-4, interactive cards lift to depth-8 */
+.card,
+.glass,
+.metric {
+  box-shadow: var(--shadow-4) !important;
+  transition: box-shadow 0.2s var(--fluent-ease), transform 0.2s var(--fluent-ease), border-color 0.2s var(--fluent-ease);
+}
+button.card:hover,
+a.card:hover {
+  box-shadow: var(--shadow-8) !important;
+  transform: translateY(-1px);
+  border-color: rgba(0,120,212, 0.4) !important;
+}
+/* Dialogs / flyouts read as a higher layer */
+dialog,
+[role="dialog"] .card,
+.modal-overlay .card,
+.light-modal-panel,
+.revisit-booking-modal { box-shadow: var(--shadow-28) !important; }
+
+/* Fluent primary button: accent fill, shade on hover, seat on press (no lift) */
+.btn {
+  box-shadow: var(--shadow-2);
+  transition: background-color 0.12s var(--fluent-ease), box-shadow 0.12s var(--fluent-ease), filter 0.12s var(--fluent-ease);
+}
+.btn:hover { transform: none; }
+.btn:hover:not(:disabled):not(.g):not(.ghost):not(.outline):not(.danger) { background: var(--accent-hover); }
+.btn:active:not(:disabled) { transform: none; box-shadow: none; filter: brightness(0.95); }
+
+/* Fluent field: 2px accent bottom-stroke + soft ring on focus */
+.input:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent) !important;
+  box-shadow: inset 0 -2px 0 0 var(--accent), 0 0 0 3px rgba(0,120,212, 0.14) !important;
+}
+
+/* Fluent focus stroke: crisp, high-contrast 2px accent-dark outline */
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible,
+.input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent-pressed) !important;
+  outline-offset: 2px !important;
+}
+
+/* ===================================================== Liquid Glass
+   Translucent frosted-glass surfaces floating over a soft Microsoft-hued colour
+   field, so every panel refracts the accent light behind it (Apple "Liquid Glass"
+   feel) while keeping the Microsoft communication-blue palette. Appended last so it
+   wins the cascade over the flat-white theme. */
+
+/* Colour field behind the glass — a refined, desaturated wash of deep sapphire,
+   muted indigo and a champagne-gold whisper over a warm pearl/ivory base, for a
+   calm, high-end editorial feel rather than a bright, busy field. */
+body {
+  background:
+    radial-gradient(1100px 760px at 4% -10%, rgba(23, 58, 110, 0.10), transparent 60%),
+    radial-gradient(980px 720px at 99% 0%, rgba(58, 74, 120, 0.08), transparent 60%),
+    radial-gradient(1050px 820px at 96% 108%, rgba(184, 148, 95, 0.09), transparent 62%),
+    radial-gradient(900px 740px at 6% 100%, rgba(30, 86, 140, 0.07), transparent 60%),
+    linear-gradient(180deg, #f6f4ef, #fbfaf7) !important;
+  background-attachment: fixed !important;
+}
+
+/* Warm-tinted frosted glass with a refined layered shadow + a champagne-gold inner
+   floor sheen — gives panels an expensive, softly lit depth. */
+.card,
+.glass,
+.metric {
+  background: linear-gradient(135deg, rgba(255, 255, 253, 0.88), rgba(250, 248, 243, 0.72)) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.75) !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 14px 38px rgba(28, 33, 51, 0.10),
+    0 2px 6px rgba(28, 33, 51, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -14px 26px -20px rgba(184, 148, 95, 0.16) !important;
+}
+
+/* Interactive cards deepen the glass + lift on hover */
+button.card:hover,
+a.card:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.6)) !important;
+  box-shadow:
+    0 18px 44px rgba(2, 32, 71, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -16px 28px -18px rgba(0, 120, 212, 0.34) !important;
+  transform: translateY(-2px);
+}
+
+/* Dialogs read as denser glass so their text stays crisp */
+dialog,
+[role="dialog"] .card,
+.modal-overlay .card,
+.light-modal-panel,
+.revisit-booking-modal {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.78)) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+  box-shadow: 0 30px 70px rgba(2, 32, 71, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Rounder, translucent controls to match the liquid language */
+.btn { border-radius: 12px !important; }
+.input,
+input,
+textarea,
+select {
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.62) !important;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.chip,
+.holo,
+.subsection,
+.alertbox,
+.bubble { border-radius: 14px !important; }
+
+/* Dropdown lists must stay opaque to remain legible */
+select option { background: #ffffff !important; }
+
+/* ===================================================== Lighter tone pass
+   Wherever dark tones remained on the light canvas — the near-black KPI numbers, the
+   deep-navy heading gradients and the navy active-nav accent — soften them to a lighter
+   Microsoft blue so nothing reads dark against the airy surface. */
+
+/* Big KPI numbers: near-black -> lighter brand blue */
+.metric .v {
+  background: none !important;
+  color: #2f86d6 !important;
+  -webkit-text-fill-color: #2f86d6 !important;
+}
+
+/* Heading gradients: lighter navy -> blue ramp (were near-black #14213d starts) */
+.grad-text-page,
+.grad-text {
+  background: linear-gradient(92deg, #2f74bd, #57a8e8 78%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* Active sidebar nav links: lighter blue instead of deep navy */
+a[aria-current="page"] { color: #2b7fd0 !important; }
+
+/* ===================================================== Premium accents
+   A champagne-gold + warm-ivory finishing layer over the light Microsoft-blue brand
+   for a high-end, editorial feel. Appended last so it wins the cascade. */
+:root { --gold: #b8945f; --gold-soft: #d9c39a; }
+
+/* Interactive cards: warm ivory glass + champagne floor sheen on hover */
+button.card:hover,
+a.card:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 253, 0.9), rgba(250, 248, 243, 0.66)) !important;
+  box-shadow:
+    0 22px 50px rgba(28, 33, 51, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -16px 30px -18px rgba(184, 148, 95, 0.28) !important;
+  border-color: rgba(184, 148, 95, 0.35) !important;
+  transform: translateY(-2px);
+}
+
+/* Primary button: liquid glass instead of a solid dark-blue fill — a translucent
+   frosted surface with blue text that matches the panels, and a light glass hover
+   (no dark-navy state). */
+.btn:not(.ghost):not(.outline):not(.danger):not(.g):not(:disabled) {
+  color: #0a5aa8 !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.36)) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  box-shadow:
+    0 8px 22px rgba(2, 32, 71, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -10px 20px -14px rgba(0, 120, 212, 0.30) !important;
+}
+.btn:not(.ghost):not(.outline):not(.danger):not(.g):not(:disabled):hover {
+  color: #0a4f92 !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.48)) !important;
+  border-color: rgba(0, 120, 212, 0.45) !important;
+  box-shadow:
+    0 12px 30px rgba(2, 32, 71, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -12px 22px -14px rgba(0, 120, 212, 0.42) !important;
+}
+
+/* Warm, refined selection + scrollbar */
+::selection { background: rgba(184, 148, 95, 0.22); color: #3a2f1c; }
+::-webkit-scrollbar-thumb { background: rgba(28, 33, 51, 0.22) !important; }
+::-webkit-scrollbar-thumb:hover { background: rgba(184, 148, 95, 0.5) !important; }

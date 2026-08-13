@@ -77,8 +77,8 @@ export default function PatientOncologyCare() {
                 onClick={() => setTab(t.id)}
                 className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition"
                 style={{
-                  color: tab === t.id ? "#123a7a" : "var(--muted)",
-                  background: tab === t.id ? "linear-gradient(90deg, rgba(37,100,207,.18), rgba(26,79,180,.18))" : "var(--panel)",
+                  color: tab === t.id ? "#004578" : "var(--muted)",
+                  background: tab === t.id ? "linear-gradient(90deg, rgba(0,120,212,.18), rgba(0,69,120,.18))" : "var(--panel)",
                   border: `1px solid ${tab === t.id ? "var(--line2)" : "var(--glass-border)"}`,
                 }}
               >

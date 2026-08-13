@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     )
 
     # App
-    app_name: str = "Qconnect — Smart Hospital Platform"
+    app_name: str = "ClinIQ — Smart Hospital Platform"
     app_version: str = "0.1.0"
     environment: str = "development"
 

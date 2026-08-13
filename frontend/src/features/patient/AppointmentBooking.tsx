@@ -31,6 +31,18 @@ function todayIso() {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 }
 
+function addDaysIso(iso: string, days: number) {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+}
+
+function dateLabel(iso: string) {
+  const d = new Date(`${iso}T00:00:00`);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
+}
+
 function timeLabel(value: string) {
   if (!value) return "";
   const d = new Date(value);
@@ -58,6 +70,7 @@ export default function AppointmentBooking() {
   const [checkoutEmail, setCheckoutEmail] = useState(session.email || "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [showPayModal, setShowPayModal] = useState(false);
   const [pendingOrder, setPendingOrder] = useState<any>(null);
 
@@ -74,15 +87,33 @@ export default function AppointmentBooking() {
   async function findAvailability() {
     setBusy(true);
     setError("");
+    setNotice("");
     setSelectedSlot(null);
     try {
-      const result = await api.appointmentSlots({
+      let queryDate = date;
+      let result = await api.appointmentSlots({
         patient_id: session.patient_id,
-        appointment_date: date,
+        appointment_date: queryDate,
         reason,
       });
+      // Today's slots may have already passed (after operating hours), or the day may be closed.
+      // Look ahead up to a week for the next day that still has open slots.
+      let lookAhead = 0;
+      while ((result.slots?.length ?? 0) === 0 && lookAhead < 7) {
+        lookAhead += 1;
+        queryDate = addDaysIso(date, lookAhead);
+        result = await api.appointmentSlots({
+          patient_id: session.patient_id,
+          appointment_date: queryDate,
+          reason,
+        });
+      }
       setSpecialty(result.specialty);
       setSlots(result.slots ?? []);
+      if (queryDate !== date && (result.slots?.length ?? 0) > 0) {
+        setDate(queryDate);
+        setNotice(`No remaining slots for ${dateLabel(date)}. Showing the next available day: ${dateLabel(queryDate)}.`);
+      }
       setStep("slots");
     } catch (e) {
       setError(errorText(e));
@@ -170,10 +201,11 @@ export default function AppointmentBooking() {
       {step === "slots" && <>
         <div>
           <h3 className="text-lg font-extrabold">Available doctors and slots</h3>
-          <p className="text-sm" style={{ color: "var(--muted)" }}>Mapped speciality: <b>{specialty}</b></p>
+          <p className="text-sm" style={{ color: "var(--muted)" }}>Mapped speciality: <b>{specialty}</b> · {dateLabel(date)}</p>
         </div>
+        {notice && <div className="holo" style={{ color: "var(--muted)" }}>{notice}</div>}
         {busy && <div className="holo">Loading {specialty} doctors and slots...</div>}
-        {!busy && !doctors.length && <div className="holo">No {specialty} doctors or slots are available on this date.</div>}
+        {!busy && !doctors.length && <div className="holo">No {specialty} doctors have open slots in the next 7 days. Please try a different reason or date.</div>}
         {doctors.map(({ doctor, slots: doctorSlots }) => <div className="holo" key={doctor.doctor_id}>
           <div className="flex items-start justify-between gap-3"><div><b>{doctor.doctor_name}</b><div className="text-xs" style={{ color: "var(--muted)" }}>{doctor.specialty}</div></div><UserRound size={18} /></div>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-2 scrollbar-thin">{doctorSlots.map((slot) => {
@@ -184,7 +216,7 @@ export default function AppointmentBooking() {
                 style={selected ? { 
                   color: "#ffffff", 
                   background: "linear-gradient(135deg, var(--cyan), var(--blue))", 
-                  boxShadow: "0 0 14px rgba(37,100,207, 0.3)", 
+                  boxShadow: "0 0 14px rgba(0,120,212, 0.3)", 
                   borderColor: "transparent" 
                 } : undefined} 
                 key={slot.scheduled_start} 

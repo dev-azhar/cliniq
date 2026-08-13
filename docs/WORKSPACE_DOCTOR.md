@@ -1,4 +1,4 @@
-# Qconnect — Doctor Workspace
+# ClinIQ — Doctor Workspace
 
 > **Audience:** Doctor portal developer
 > Read `SYSTEM_FLOW_OVERVIEW.md` first for the big picture.

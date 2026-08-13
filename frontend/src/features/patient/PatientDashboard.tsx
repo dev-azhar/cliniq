@@ -636,7 +636,7 @@ export default function PatientDashboard() {
             ].map((field) => (
               <div
                 key={field.label}
-                className={`flex min-w-0 items-start gap-2 rounded-xl border border-[var(--line)] bg-[rgba(20,33,61,0.025)] px-3 py-2.5 transition hover:border-[var(--line2)] hover:bg-[rgba(37,100,207,0.04)] ${field.label === "Address" ? "min-[420px]:col-span-2" : ""}`}
+                className={`flex min-w-0 items-start gap-2 rounded-xl border border-[var(--line)] bg-[rgba(20,33,61,0.025)] px-3 py-2.5 transition hover:border-[var(--line2)] hover:bg-[rgba(0,120,212,0.04)] ${field.label === "Address" ? "min-[420px]:col-span-2" : ""}`}
               >
                 <field.icon size={14} className="mt-0.5 shrink-0 text-[var(--cyan)]" />
                 <div className="min-w-0">
@@ -710,10 +710,10 @@ export default function PatientDashboard() {
                     setSelectedEncounterId(null);
                     setShowMobileVisitList(false);
                   }}
-                  className="block h-[90px] w-full overflow-hidden rounded-xl border p-2.5 text-left text-xs transition hover:bg-[rgba(37,100,207,0.06)]"
+                  className="block h-[90px] w-full overflow-hidden rounded-xl border p-2.5 text-left text-xs transition hover:bg-[rgba(0,120,212,0.06)]"
                   style={{
                     borderColor: isActive ? "var(--line2)" : "var(--glass-border)",
-                    background: isActive ? "rgba(37,100,207,0.05)" : "rgba(255,255,255,0.01)"
+                    background: isActive ? "rgba(0,120,212,0.05)" : "rgba(255,255,255,0.01)"
                   }}
                 >
                   <div className="flex justify-between items-center mb-1">
@@ -741,10 +741,10 @@ export default function PatientDashboard() {
                 <button
                   key={ep.encounter_id}
                   onClick={() => handleEpisodeClick(ep)}
-                  className="block h-[90px] w-full overflow-hidden rounded-xl border p-2.5 text-left text-xs transition hover:bg-[rgba(37,100,207,0.06)]"
+                  className="block h-[90px] w-full overflow-hidden rounded-xl border p-2.5 text-left text-xs transition hover:bg-[rgba(0,120,212,0.06)]"
                   style={{
                     borderColor: isActive ? "var(--line2)" : "var(--glass-border)",
-                    background: isActive ? "rgba(37,100,207,0.05)" : "rgba(255,255,255,0.01)"
+                    background: isActive ? "rgba(0,120,212,0.05)" : "rgba(255,255,255,0.01)"
                   }}
                 >
                   <div className="flex justify-between items-center mb-1">
@@ -765,11 +765,11 @@ export default function PatientDashboard() {
         {oncologyDiagnoses && oncologyDiagnoses.length > 0 && (
           <button
             type="button"
-            className="card w-full text-left cursor-pointer transition hover:bg-[rgba(37,100,207,0.06)]"
+            className="card w-full text-left cursor-pointer transition hover:bg-[rgba(0,120,212,0.06)]"
             onClick={() => nav("/patient/oncology")}
           >
             <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: "rgba(37,100,207,0.15)" }}>
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: "rgba(0,120,212,0.15)" }}>
                 <Syringe size={18} style={{ color: "var(--cyan)" }} />
               </div>
               <div className="min-w-0 flex-1">
@@ -799,10 +799,10 @@ export default function PatientDashboard() {
                 <button
                   key={ep.encounter_id}
                   onClick={() => handleEpisodeClick(ep)}
-                  className="block h-[90px] w-full overflow-hidden rounded-xl border p-2.5 text-left text-xs transition hover:bg-[rgba(37,100,207,0.06)]"
+                  className="block h-[90px] w-full overflow-hidden rounded-xl border p-2.5 text-left text-xs transition hover:bg-[rgba(0,120,212,0.06)]"
                   style={{ 
                     borderColor: isActive ? "var(--line2)" : "var(--glass-border)", 
-                    background: isActive ? "rgba(37,100,207,0.05)" : "rgba(255,255,255,0.01)" 
+                    background: isActive ? "rgba(0,120,212,0.05)" : "rgba(255,255,255,0.01)" 
                   }}
                 >
                   <div className="mb-1 flex items-center justify-between">
@@ -852,7 +852,7 @@ export default function PatientDashboard() {
           <Card className="space-y-4 animate-in fade-in duration-300">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--glass-border)] pb-3">
               <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: "rgba(37,100,207,0.12)" }}>
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: "rgba(0,120,212,0.12)" }}>
                   <Ticket size={18} className="text-[var(--cyan)]" />
                 </div>
                 <div>
@@ -968,13 +968,13 @@ export default function PatientDashboard() {
           <Card 
             className="space-y-4 animate-in fade-in duration-300 relative overflow-hidden"
             style={{ 
-              background: "linear-gradient(135deg, rgba(37,100,207,0.06), rgba(26,79,180,0.06))",
-              borderColor: "rgba(37,100,207,0.25)" 
+              background: "linear-gradient(135deg, rgba(0,120,212,0.06), rgba(0,69,120,0.06))",
+              borderColor: "rgba(0,120,212,0.25)" 
             }}
           >
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--glass-border)] pb-3">
               <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: "rgba(37,100,207,0.12)" }}>
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: "rgba(0,120,212,0.12)" }}>
                   <MapPin size={18} className="text-[var(--cyan)]" />
                 </div>
                 <div>
@@ -999,14 +999,14 @@ export default function PatientDashboard() {
             <div 
               className="token-highlight relative flex flex-col items-center justify-center space-y-2 overflow-hidden rounded-2xl border p-3.5 text-center shadow-md max-w-sm mx-auto w-full"
               style={{ 
-                background: "rgba(37,100,207,0.03)",
-                borderColor: "rgba(37,100,207,0.2)" 
+                background: "rgba(0,120,212,0.03)",
+                borderColor: "rgba(0,120,212,0.2)" 
               }}
             >
               <div className="rounded-full border border-sky-500/20 bg-sky-500/5 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-[var(--cyan)]">
                 E-Consultation Token
               </div>
-              <div className="text-4xl font-black tracking-wider text-[var(--ink)] drop-shadow-[0_0_12px_rgba(37,100,207,0.6)]">
+              <div className="text-4xl font-black tracking-wider text-[var(--ink)] drop-shadow-[0_0_12px_rgba(0,120,212,0.6)]">
                 {encDetails.token?.number || "E-PENDING"}
               </div>
               
@@ -1014,7 +1014,7 @@ export default function PatientDashboard() {
                 <div className="text-[var(--muted)] font-bold flex items-center justify-center gap-1">
                   <MapPin size={12} className="text-[var(--cyan)]" /> Tele-Consult / Online Review
                 </div>
-                <div className="text-[10px] text-sky-700/80 bg-[rgba(37,100,207,0.08)] px-2 py-0.5 rounded-full border border-sky-600/20 mt-2 inline-block">
+                <div className="text-[10px] text-sky-700/80 bg-[rgba(0,120,212,0.08)] px-2 py-0.5 rounded-full border border-sky-600/20 mt-2 inline-block">
                   Waiting for doctor review...
                 </div>
               </div>
@@ -1044,7 +1044,7 @@ export default function PatientDashboard() {
           <Card className="space-y-4 animate-in fade-in duration-300">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--glass-border)] pb-3">
               <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: "rgba(37,100,207,0.12)" }}>
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: "rgba(0,120,212,0.12)" }}>
                   <Clipboard size={18} className="text-[var(--cyan)]" />
                 </div>
                 <div>
@@ -1090,7 +1090,7 @@ export default function PatientDashboard() {
                   <div 
                     className="token-highlight relative flex flex-col items-center justify-center space-y-2 overflow-hidden rounded-2xl border p-3.5 text-center shadow-md max-w-sm mx-auto w-full"
                     style={{ 
-                      background: "linear-gradient(135deg, rgba(16,185,129,0.06), rgba(37,100,207,0.06))",
+                      background: "linear-gradient(135deg, rgba(16,185,129,0.06), rgba(0,120,212,0.06))",
                       borderColor: "rgba(16,185,129,0.25)" 
                     }}
                   >
@@ -1127,14 +1127,14 @@ export default function PatientDashboard() {
                   <div 
                     className="token-highlight relative flex flex-col items-center justify-center space-y-2 overflow-hidden rounded-2xl border p-3.5 text-center shadow-md max-w-sm mx-auto w-full"
                     style={{ 
-                      background: "linear-gradient(135deg, rgba(37,100,207,0.06), rgba(26,79,180,0.06))",
-                      borderColor: "rgba(37,100,207,0.25)" 
+                      background: "linear-gradient(135deg, rgba(0,120,212,0.06), rgba(0,69,120,0.06))",
+                      borderColor: "rgba(0,120,212,0.25)" 
                     }}
                   >
                     <div className="rounded-full border border-sky-500/20 bg-sky-500/5 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-[var(--cyan)]">
                       E-Consultation Token
                     </div>
-                    <div className="text-4xl font-black tracking-wider text-[var(--ink)] drop-shadow-[0_0_12px_rgba(37,100,207,0.6)]">
+                    <div className="text-4xl font-black tracking-wider text-[var(--ink)] drop-shadow-[0_0_12px_rgba(0,120,212,0.6)]">
                       {tokenNum}
                     </div>
                     
@@ -1142,7 +1142,7 @@ export default function PatientDashboard() {
                       <div className="text-[var(--muted)] font-bold flex items-center justify-center gap-1">
                         <MapPin size={12} className="text-[var(--cyan)]" /> Tele-Consult / Online Review
                       </div>
-                      <div className="text-[10px] text-sky-700/80 bg-[rgba(37,100,207,0.08)] px-2 py-0.5 rounded-full border border-sky-600/20 mt-2 inline-block">
+                      <div className="text-[10px] text-sky-700/80 bg-[rgba(0,120,212,0.08)] px-2 py-0.5 rounded-full border border-sky-600/20 mt-2 inline-block">
                         Waiting for doctor review...
                       </div>
                     </div>
@@ -1168,14 +1168,14 @@ export default function PatientDashboard() {
                 <div 
                   className="token-highlight relative flex flex-col items-center justify-center space-y-2 overflow-hidden rounded-2xl border p-3.5 text-center shadow-md max-w-sm mx-auto w-full"
                   style={{ 
-                    background: "linear-gradient(135deg, rgba(37,100,207,0.06), rgba(26,79,180,0.06))",
-                    borderColor: "rgba(37,100,207,0.25)" 
+                    background: "linear-gradient(135deg, rgba(0,120,212,0.06), rgba(0,69,120,0.06))",
+                    borderColor: "rgba(0,120,212,0.25)" 
                   }}
                 >
                   <div className="rounded-full border border-sky-500/20 bg-sky-500/5 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-[var(--cyan)]">
                     Triage Queue Token
                   </div>
-                  <div className="text-4xl font-black tracking-wider text-[var(--ink)] drop-shadow-[0_0_12px_rgba(37,100,207,0.6)]">
+                  <div className="text-4xl font-black tracking-wider text-[var(--ink)] drop-shadow-[0_0_12px_rgba(0,120,212,0.6)]">
                     {triageTokenNum}
                   </div>
                   
@@ -1237,7 +1237,7 @@ export default function PatientDashboard() {
             <Card className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--glass-border)] pb-3">
                 <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: "rgba(37,100,207,0.12)" }}>
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: "rgba(0,120,212,0.12)" }}>
                     <Clipboard size={18} className="text-[var(--cyan)]" />
                   </div>
                   <div>
@@ -1270,8 +1270,8 @@ export default function PatientDashboard() {
                 <div 
                   className="token-highlight relative flex flex-col items-center justify-center space-y-3 overflow-hidden rounded-2xl border-2 p-5 text-center shadow-lg sm:p-7"
                   style={{ 
-                    background: "linear-gradient(135deg, rgba(37,100,207,0.1), rgba(26,79,180,0.1))",
-                    borderColor: "rgba(37,100,207,0.3)" 
+                    background: "linear-gradient(135deg, rgba(0,120,212,0.1), rgba(0,69,120,0.1))",
+                    borderColor: "rgba(0,120,212,0.3)" 
                   }}
                 >
                   <div className="absolute top-0 right-0 p-2 opacity-5">
@@ -1279,7 +1279,7 @@ export default function PatientDashboard() {
                   </div>
                   
                   <div className="rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--cyan)]">Your Queue Token</div>
-                  <div className="text-5xl font-black tracking-wider text-[var(--ink)] drop-shadow-[0_0_16px_rgba(37,100,207,0.8)] sm:text-6xl">
+                  <div className="text-5xl font-black tracking-wider text-[var(--ink)] drop-shadow-[0_0_16px_rgba(0,120,212,0.8)] sm:text-6xl">
                     {encDetails.token.number}
                   </div>
                   
@@ -1292,7 +1292,7 @@ export default function PatientDashboard() {
                     </div>
                   </div>
                   
-                  <div className="text-[10px] font-semibold text-sky-700/80 bg-[rgba(37,100,207,0.08)] px-2.5 py-0.5 rounded-full border border-sky-600/20 mt-1 animate-pulse">
+                  <div className="text-[10px] font-semibold text-sky-700/80 bg-[rgba(0,120,212,0.08)] px-2.5 py-0.5 rounded-full border border-sky-600/20 mt-1 animate-pulse">
                     Waiting for doctor call...
                   </div>
                 </div>
@@ -1330,7 +1330,7 @@ export default function PatientDashboard() {
               <Card 
                 className="p-4 space-y-4 border-sky-600/20 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300"
                 style={{ 
-                  background: "linear-gradient(135deg, rgba(37,100,207,0.04), rgba(26,79,180,0.04))",
+                  background: "linear-gradient(135deg, rgba(0,120,212,0.04), rgba(0,69,120,0.04))",
                   borderColor: "rgba(255,255,255,0.05)"
                 }}
               >
@@ -1392,7 +1392,7 @@ export default function PatientDashboard() {
                       marker = "✓";
                     } else if (activeLab) {
                       statusText = `Checked-in (${activeLab.token?.number || "L-101"})`;
-                      stepColorClass = "bg-sky-600 text-white border-sky-600/20 shadow-[0_0_10px_rgba(37,100,207,0.3)] animate-pulse";
+                      stepColorClass = "bg-sky-600 text-white border-sky-600/20 shadow-[0_0_10px_rgba(0,120,212,0.3)] animate-pulse";
                       marker = "⚡";
                     }
 
@@ -1426,7 +1426,7 @@ export default function PatientDashboard() {
                       statusText = activeFollowup.visit_type === "E_CONSULT" 
                         ? `E-Consult Active (${activeFollowup.token?.number || "E-501"})`
                         : `Re-visit Active (${activeFollowup.token?.number || "T-101"})`;
-                      stepColorClass = "bg-sky-600 text-white border-sky-600/20 shadow-[0_0_10px_rgba(37,100,207,0.3)] animate-pulse";
+                      stepColorClass = "bg-sky-600 text-white border-sky-600/20 shadow-[0_0_10px_rgba(0,120,212,0.3)] animate-pulse";
                       marker = "⚡";
                     }
 
@@ -1595,8 +1595,8 @@ export default function PatientDashboard() {
               <Card 
                 className="space-y-3.5 relative overflow-hidden"
                 style={{ 
-                  background: "linear-gradient(135deg, rgba(37,100,207,0.08), rgba(26,79,180,0.08))", 
-                  borderColor: "rgba(37,100,207,0.2)" 
+                  background: "linear-gradient(135deg, rgba(0,120,212,0.08), rgba(0,69,120,0.08))", 
+                  borderColor: "rgba(0,120,212,0.2)" 
                 }}
               >
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] pb-3">
@@ -1714,7 +1714,7 @@ export default function PatientDashboard() {
                                 setShowRevisitModal(true);
                               }}
                               className="btn sm"
-                              style={{ background: "linear-gradient(135deg, var(--cyan), #14213d)", color: "white", border: "none" }}
+                              style={{ background: "linear-gradient(135deg, var(--cyan), #004578)", color: "white", border: "none" }}
                             >
                               🏥 Book In-Person Re-Visit
                             </button>
@@ -1722,7 +1722,7 @@ export default function PatientDashboard() {
                               onClick={() => handleRequestEconsult(docId)}
                               disabled={requestingEconsult}
                               className="btn outline sm flex items-center gap-1.5"
-                              style={{ borderColor: "rgba(37,100,207,0.3)", color: "var(--cyan)" }}
+                              style={{ borderColor: "rgba(0,120,212,0.3)", color: "var(--cyan)" }}
                             >
                               💬 Request E-Consultation (Remote Review)
                             </button>
@@ -1748,7 +1748,7 @@ export default function PatientDashboard() {
                                 setShowRevisitModal(true);
                               }}
                               className="btn sm"
-                              style={{ background: "linear-gradient(135deg, var(--cyan), #14213d)", color: "white", border: "none" }}
+                              style={{ background: "linear-gradient(135deg, var(--cyan), #004578)", color: "white", border: "none" }}
                             >
                               📂 Upload Reports &amp; Book Re-Visit
                             </button>
@@ -1783,7 +1783,7 @@ export default function PatientDashboard() {
           <Card className="text-center py-14">
             <div
               className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl"
-              style={{ background: "linear-gradient(150deg,rgba(37,100,207,0.12),rgba(26,79,180,0.12))" }}
+              style={{ background: "linear-gradient(150deg,rgba(0,120,212,0.12),rgba(0,69,120,0.12))" }}
             >
               <Clipboard size={26} className="text-[var(--cyan)]" />
             </div>

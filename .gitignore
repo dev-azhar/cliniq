@@ -25,3 +25,8 @@ coverage/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Runtime-uploaded lab artifacts (user data, not source)
+uploads/lab_*
+backend/uploads/lab_*
+*.jpe

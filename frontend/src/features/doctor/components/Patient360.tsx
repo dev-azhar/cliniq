@@ -247,7 +247,7 @@ export default function Patient360({ patientId, encounterId }: Patient360Props) 
       {/* Chronic Medical Issues (Problem List) */}
       <Card className="space-y-3 relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(239,68,68,0.04), transparent)" }}>
         <div className="flex justify-between items-center pb-1.5 border-b border-white/5">
-          <h4 className="font-bold flex items-center gap-1.5" style={{ color: "#123a7a" }}>
+          <h4 className="font-bold flex items-center gap-1.5" style={{ color: "#004578" }}>
             Chronic Medical Issues (Problem List)
           </h4>
           <span className="text-[10px] uppercase font-extrabold tracking-wider text-[var(--dim)]">Persists Across Encounters</span>
@@ -296,7 +296,7 @@ export default function Patient360({ patientId, encounterId }: Patient360Props) 
               type="submit"
               disabled={addingIssue}
               className="btn w-full py-1.5 px-4 text-xs font-bold"
-              style={{ background: "linear-gradient(135deg, var(--cyan), #14213d)", color: "white", border: "none" }}
+              style={{ background: "linear-gradient(135deg, var(--cyan), #004578)", color: "white", border: "none" }}
             >
               {addingIssue ? "Saving..." : "Add Issue"}
             </button>
@@ -306,9 +306,9 @@ export default function Patient360({ patientId, encounterId }: Patient360Props) 
 
       {/* Today's Consultation Notes & Advice */}
       {encounterId && (
-        <Card className="space-y-3 relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(26,79,180,0.06), transparent)" }}>
+        <Card className="space-y-3 relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(0,69,120,0.06), transparent)" }}>
           <div className="flex items-center justify-between">
-            <h4 className="font-bold flex items-center gap-1.5" style={{ color: "#123a7a" }}>
+            <h4 className="font-bold flex items-center gap-1.5" style={{ color: "#004578" }}>
               <FileText size={16} className="text-sky-500" /> Active Consultation Notes &amp; Advice
             </h4>
             {notesSuccess && (
@@ -347,8 +347,8 @@ export default function Patient360({ patientId, encounterId }: Patient360Props) 
               <div 
                 className="p-3 rounded-xl border text-[11px] space-y-1 mb-2.5 animate-in fade-in duration-200"
                 style={{ 
-                  background: "rgba(26,79,180, 0.05)", 
-                  borderColor: "rgba(26,79,180, 0.25)",
+                  background: "rgba(0,69,120, 0.05)", 
+                  borderColor: "rgba(0,69,120, 0.25)",
                   color: "var(--ink)"
                 }}
               >
@@ -378,7 +378,7 @@ export default function Patient360({ patientId, encounterId }: Patient360Props) 
                 onClick={handleSaveNotes}
                 disabled={savingNotes}
                 className="btn !py-1 !px-4 text-xs font-bold"
-                style={{ background: "linear-gradient(135deg, #1a4fb4, #003966)", color: "white", border: "none" }}
+                style={{ background: "linear-gradient(135deg, #0078d4, #004578)", color: "white", border: "none" }}
               >
                 {savingNotes ? "Saving..." : "Save Consultation Notes"}
               </button>
@@ -392,8 +392,8 @@ export default function Patient360({ patientId, encounterId }: Patient360Props) 
         {/* Column 1: Recent Results */}
         <Card className="flex min-w-0 flex-col">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h4 className="font-bold" style={{ color: "#123a7a" }}>Recent results</h4>
-            <span className="rounded-full bg-[rgba(37,100,207,0.08)] px-2 py-0.5 text-[10px] font-bold text-[var(--cyan)]">
+            <h4 className="font-bold" style={{ color: "#004578" }}>Recent results</h4>
+            <span className="rounded-full bg-[rgba(0,120,212,0.08)] px-2 py-0.5 text-[10px] font-bold text-[var(--cyan)]">
               {recentLabSections.length} {recentLabSections.length === 1 ? "test" : "tests"}
             </span>
           </div>
@@ -431,7 +431,7 @@ export default function Patient360({ patientId, encounterId }: Patient360Props) 
 
         {/* Column 2: Previous visit records */}
         <Card className="flex min-w-0 flex-col">
-          <h4 className="mb-3 font-bold" style={{ color: "#123a7a" }}>Previous visit records</h4>
+          <h4 className="mb-3 font-bold" style={{ color: "#004578" }}>Previous visit records</h4>
           <div className="max-h-[360px] flex-1 space-y-2 overflow-y-auto pr-1">
             {data.encounters?.filter((e: any) => e.encounter_id !== encounterId && e.status === "DISCHARGED").map((e: any) => (
               <HistoricalVisitDropdown key={e.encounter_id} encounter={e} />
@@ -442,10 +442,10 @@ export default function Patient360({ patientId, encounterId }: Patient360Props) 
         {/* Column 3: Uploaded reports */}
         <Card className="flex min-w-0 flex-col animate-in fade-in duration-300">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h4 className="flex items-center gap-2 font-bold" style={{ color: "#123a7a" }}>
+            <h4 className="flex items-center gap-2 font-bold" style={{ color: "#004578" }}>
               <FileText size={16} className="text-[var(--cyan)]" /> Uploaded reports
             </h4>
-            <span className="rounded-full bg-[rgba(37,100,207,0.08)] px-2 py-0.5 text-[10px] font-bold text-[var(--cyan)]">
+            <span className="rounded-full bg-[rgba(0,120,212,0.08)] px-2 py-0.5 text-[10px] font-bold text-[var(--cyan)]">
               {data.documents?.length || 0}
             </span>
           </div>
@@ -455,7 +455,7 @@ export default function Patient360({ patientId, encounterId }: Patient360Props) 
                 key={d.document_id} 
                 className="flex min-w-0 items-start gap-2.5 rounded-xl border border-[var(--line)] bg-white/20 p-2.5 text-xs"
               >
-                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[rgba(37,100,207,0.08)] text-[var(--cyan)]">
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[rgba(0,120,212,0.08)] text-[var(--cyan)]">
                   <FileText size={14} />
                 </div>
                 <div className="min-w-0 flex-1">

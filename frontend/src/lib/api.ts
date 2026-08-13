@@ -123,6 +123,8 @@ export const api = {
   },
   ambientResetSpeakers: (encounter_id: string) =>
     post<any>(`/api/v1/encounters/${encounter_id}/ambient/reset-speakers`, {}),
+  translateText: (text: string, targetLanguage: string) =>
+    post<{ translated_text: string; translated: boolean }>("/api/v1/translate", { text, target_language: targetLanguage }),
   approveNote: (note_id: string, body: any) => post<any>(`/api/v1/notes/${note_id}/approve`, body),
   createLabOrders: (encounter_id: string, tests: string[], ordered_by?: string | null) =>
     post<any>("/api/v1/lab-orders", { encounter_id, tests, ordered_by: ordered_by || undefined }),

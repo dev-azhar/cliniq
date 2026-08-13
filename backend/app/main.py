@@ -19,6 +19,7 @@ from app.api import (
     routes_command,
     routes_journey,
     routes_oncology,
+    routes_os,
     routes_ws,
 )
 from app.core.config import settings
@@ -34,7 +35,7 @@ async def lifespan(app: FastAPI):
     init_db()
     hub.bind_loop(asyncio.get_running_loop())
     bus.subscribe("*", hub.on_event)  # stream every domain event to WebSocket clients
-    logging.getLogger("aarogya").info("Qconnect backend ready · env=%s · db=%s",
+    logging.getLogger("aarogya").info("ClinIQ backend ready · env=%s · db=%s",
                                        settings.environment, settings.database_url)
     yield
 
@@ -68,6 +69,7 @@ app.include_router(routes_ai.router)
 app.include_router(routes_ws.router)
 app.include_router(routes_admin.router)
 app.include_router(routes_oncology.router)
+app.include_router(routes_os.router)
 
 
 @app.get("/health", tags=["meta"])

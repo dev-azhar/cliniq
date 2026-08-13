@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ClinIQ — UX One-Pager</title>
+<style>
+  :root {
+    --accent: #0078d4;
+    --accent-deep: #004578;
+    --ink: #1f2937;
+    --muted: #5b6675;
+    --gold: #b8945f;
+    --line: rgba(28, 33, 51, 0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(900px 620px at 4% -10%, rgba(23, 58, 110, 0.10), transparent 60%),
+      radial-gradient(820px 600px at 99% 0%, rgba(184, 148, 95, 0.10), transparent 60%),
+      linear-gradient(180deg, #f6f4ef, #fbfaf7);
+    padding: 16px 22px;
+    line-height: 1.38;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet { max-width: 1000px; margin: 0 auto; }
+
+  header {
+    display: flex; align-items: center; gap: 14px;
+    padding-bottom: 12px; margin-bottom: 14px;
+    border-bottom: 2px solid transparent;
+    border-image: linear-gradient(90deg, var(--accent), var(--gold)) 1;
+  }
+  .logo {
+    width: 42px; height: 42px; border-radius: 12px; flex: none;
+    display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 18px;
+    background: linear-gradient(150deg, #3a96e0, #0078d4);
+    box-shadow: 0 6px 14px rgba(0, 120, 212, 0.24);
+  }
+  header h1 { font-size: 21px; letter-spacing: -0.02em; }
+  header .tag { color: var(--muted); font-size: 12.5px; margin-top: 1px; }
+  header .rhs { margin-left: auto; text-align: right; font-size: 11px; color: var(--muted); }
+
+  .cols { display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px; }
+
+  .card {
+    background: linear-gradient(135deg, rgba(255, 255, 253, 0.9), rgba(250, 248, 243, 0.74));
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    border-radius: 14px;
+    padding: 11px 14px;
+    box-shadow: 0 10px 26px rgba(28, 33, 51, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    margin-bottom: 10px;
+  }
+  .card:last-child { margin-bottom: 0; }
+  h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--accent-deep); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  h2::before { content: ""; width: 9px; height: 9px; border-radius: 3px; background: var(--accent); flex: none; }
+  p, li { font-size: 12.5px; color: #33404f; }
+  ul { list-style: none; }
+  li { position: relative; padding-left: 15px; margin: 3px 0; }
+  li::before { content: ""; position: absolute; left: 0; top: 7px; width: 6px; height: 6px; border-radius: 2px; background: var(--gold); }
+  strong { color: var(--ink); }
+
+  .lead { font-size: 13px; color: #2b3644; }
+
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+  .step {
+    font-size: 11.5px; font-weight: 600; color: var(--accent-deep);
+    background: rgba(0, 120, 212, 0.09); border: 1px solid rgba(0, 120, 212, 0.20);
+    padding: 4px 9px; border-radius: 8px; white-space: nowrap;
+  }
+  .arrow { color: var(--muted); font-weight: 700; }
+
+  .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 14px; }
+  .role { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .dot { width: 11px; height: 11px; border-radius: 4px; flex: none; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+  .role .r { font-weight: 600; color: var(--ink); }
+  .role .p { color: var(--muted); font-size: 11px; }
+
+  .tokens { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 12px; }
+  .tok { font-size: 11px; color: var(--muted); }
+  .tok b { display: block; color: var(--ink); font-size: 11.5px; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: middle; margin-right: 4px; border: 1px solid var(--line); }
+
+  .principles li::before { background: var(--accent); }
+
+  footer { margin-top: 12px; text-align: center; font-size: 10.5px; color: var(--muted); }
+
+  @page { size: A4 portrait; margin: 12mm; }
+  @media print {
+    body { padding: 0; background: linear-gradient(180deg, #f6f4ef, #fbfaf7); }
+    .card { box-shadow: 0 4px 14px rgba(28,33,51,.06); break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header>
+    <div class="logo">C</div>
+    <div>
+      <h1>ClinIQ — Smart Hospital</h1>
+      <div class="tag">UX at a glance · role-based clinical operations + AI copilot</div>
+    </div>
+    <div class="rhs">Design system: Microsoft-blue · Liquid Glass<br/>Premium warm-ivory canvas</div>
+  </header>
+
+  <div class="card">
+    <p class="lead"><strong>One patient, many desks.</strong> ClinIQ follows a single patient across the whole care journey — check-in → triage → doctor → lab → pharmacy → billing — with live coordination and advisory AI at every step, on a calm, premium clinical surface.</p>
+  </div>
+
+  <div class="cols">
+    <!-- LEFT -->
+    <div>
+      <div class="card">
+        <h2>Patient Journey</h2>
+        <div class="flow">
+          <span class="step">Check-in</span><span class="arrow">›</span>
+          <span class="step">Reception</span><span class="arrow">›</span>
+          <span class="step">Triage · ESI</span><span class="arrow">›</span>
+          <span class="step">Doctor + AI</span><span class="arrow">›</span>
+          <span class="step">Lab</span><span class="arrow">›</span>
+          <span class="step">Pharmacy</span><span class="arrow">›</span>
+          <span class="step">Billing</span>
+        </div>
+        <ul style="margin-top:8px">
+          <li>An <strong>active-session card</strong> in the top bar carries the current patient across every desk.</li>
+          <li><strong>Command Center</strong> mirrors it all live — queue load, alerts, event stream, audit trail.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>UX Principles</h2>
+        <ul class="principles">
+          <li><strong>Clarity over decoration</strong> — high-contrast data, tabular numerals, quiet headers.</li>
+          <li><strong>Ambient awareness</strong> — real-time queues &amp; events, no manual refresh.</li>
+          <li><strong>Advisory AI</strong> — every AI output is labeled (“✦ Live”), explainable, never auto-applied.</li>
+          <li><strong>Progressive disclosure</strong> — collapsible nav, expandable sessions, modal deep-dives.</li>
+          <li><strong>Accessible by default</strong> — focus rings, semantic roles, color never used alone.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Shell &amp; Navigation</h2>
+        <ul>
+          <li><strong>Left sidebar</strong> — role-colored nav; active item = tinted pill + accent bar.</li>
+          <li><strong>Top bar</strong> — brand tile, connection status, waffle <strong>app launcher</strong>, active-session card.</li>
+          <li><strong>Content</strong> — pattern of KPI metric row → work panel(s) → live rails; fades in on route change.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div>
+      <div class="card">
+        <h2>Role Workspaces &amp; Colors</h2>
+        <div class="roles">
+          <div class="role"><span class="dot" style="background:#0078D4"></span><span><span class="r">Home</span> <span class="p">· snapshot</span></span></div>
+          <div class="role"><span class="dot" style="background:#4F6BED"></span><span><span class="r">Reception</span> <span class="p">· front desk</span></span></div>
+          <div class="role"><span class="dot" style="background:#D13438"></span><span><span class="r">Triage</span> <span class="p">· ESI acuity</span></span></div>
+          <div class="role"><span class="dot" style="background:#038387"></span><span><span class="r">Doctor</span> <span class="p">· AI copilot</span></span></div>
+          <div class="role"><span class="dot" style="background:#8764B8"></span><span><span class="r">Oncology</span> <span class="p">· cancer care</span></span></div>
+          <div class="role"><span class="dot" style="background:#107C10"></span><span><span class="r">Lab</span> <span class="p">· results</span></span></div>
+          <div class="role"><span class="dot" style="background:#CA5010"></span><span><span class="r">Pharmacy</span> <span class="p">· dispensing</span></span></div>
+          <div class="role"><span class="dot" style="background:#004E8C"></span><span><span class="r">Command</span> <span class="p">· monitoring</span></span></div>
+          <div class="role"><span class="dot" style="background:#5C2E91"></span><span><span class="r">Admin</span> <span class="p">· governance</span></span></div>
+          <div class="role"><span class="dot" style="background:#0a5aa8"></span><span><span class="r">Patient</span> <span class="p">· portal</span></span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Design Tokens</h2>
+        <div class="tokens">
+          <div class="tok"><b><span class="sw" style="background:#0078d4"></span>Accent</b>#0078d4 · hover #106ebe</div>
+          <div class="tok"><b><span class="sw" style="background:#b8945f"></span>Gold accent</b>#b8945f / #d9c39a</div>
+          <div class="tok"><b><span class="sw" style="background:linear-gradient(135deg,#f6f4ef,#fbfaf7)"></span>Canvas</b>warm pearl #f6f4ef→#fbfaf7</div>
+          <div class="tok"><b><span class="sw" style="background:rgba(255,255,255,.7)"></span>Glass panel</b>blur 24px · sat 160%</div>
+          <div class="tok"><b>Buttons</b>liquid glass · blue text</div>
+          <div class="tok"><b>Type</b>Segoe UI Variable / Inter</div>
+          <div class="tok"><b>Radius</b>panels 16px · Fluent scale</div>
+          <div class="tok"><b>Motion</b>page fade+rise ~0.25s</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Real-Time &amp; AI</h2>
+        <ul>
+          <li><strong>Live data</strong> via WebSocket <code>/ws/stream</code> + metric polling — queues, alerts &amp; events update themselves.</li>
+          <li><strong>Clinical AI</strong> (formulary guidance) shown as labeled, explainable suggestions, cross-checked against real pharmacy stock.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>ClinIQ UX One-Pager · full spec in <strong>docs/UX_DESIGN.md</strong> · print to PDF via your browser (⌘/Ctrl-P)</footer>
+</div>
+</body>
+</html>

@@ -26,11 +26,13 @@ export default function PrescriptionSlip({
   const qc = useQueryClient();
   const [showPayModal, setShowPayModal] = useState(false);
   const [paymentDone, setPaymentDone] = useState(false);
+  const [pendingOrder, setPendingOrder] = useState<any>(null);
+  const [startingPayment, setStartingPayment] = useState(false);
 
   if (!prescription || !prescription.items || prescription.items.length === 0) {
     return (
       <Card className="space-y-3 animate-in fade-in duration-300" style={{ border: "1px solid var(--line2)" }}>
-        <h4 className="font-bold text-sm flex items-center gap-2" style={{ color: "#123a7a" }}>
+        <h4 className="font-bold text-sm flex items-center gap-2" style={{ color: "#004578" }}>
           <Stethoscope size={16} className="text-[var(--cyan)]" /> {title || "E-Prescription Slip"}
         </h4>
         <div className="text-xs italic text-[var(--dim)]">No active prescriptions recorded for this visit.</div>
@@ -76,6 +78,24 @@ export default function PrescriptionSlip({
     }
   };
 
+  // Create a real server-side Razorpay order first so verification can match it.
+  const handleStartPayment = async () => {
+    setStartingPayment(true);
+    try {
+      const order = await api.createRazorpayPrescriptionOrder({
+        patient_id: patientId,
+        amount: total,
+        rx_id: prescription.rx_id,
+      });
+      setPendingOrder(order);
+      setShowPayModal(true);
+    } catch (err: any) {
+      alert(err.message || "Unable to start payment. Please try again.");
+    } finally {
+      setStartingPayment(false);
+    }
+  };
+
   const getStatusTone = (status: string) => {
     switch (status) {
       case "DISPENSED": return "green";
@@ -91,7 +111,7 @@ export default function PrescriptionSlip({
   return (
     <Card className="space-y-4 animate-in fade-in duration-300" style={{ border: "1px solid var(--line2)" }}>
       <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
-        <h4 className="font-bold text-sm flex items-center gap-2" style={{ color: "#123a7a" }}>
+        <h4 className="font-bold text-sm flex items-center gap-2" style={{ color: "#004578" }}>
           <Stethoscope size={16} className="text-[var(--cyan)]" /> {title || "E-Prescription Slip"}
         </h4>
         <Tag tone={pickupToken?.status === "READY" ? "green" : getStatusTone(prescription.status)}>{displayStatus}</Tag>
@@ -124,7 +144,7 @@ export default function PrescriptionSlip({
 
       <div 
         className="relative space-y-3 overflow-hidden rounded-xl border p-4"
-        style={{ borderColor: "var(--line2)", background: "rgba(37,100,207,0.025)" }}
+        style={{ borderColor: "var(--line2)", background: "rgba(0,120,212,0.025)" }}
       >
         <div className="absolute -top-10 -right-10 w-24 h-24 bg-mint/5 rounded-full blur-2xl" />
 
@@ -138,7 +158,7 @@ export default function PrescriptionSlip({
         <div className="overflow-x-auto rounded-lg border border-[var(--line)] bg-white/40">
           <table className="min-w-[560px] w-full text-xs text-left">
             <thead>
-              <tr style={{ color: "var(--muted)" }} className="border-b border-[var(--line2)] bg-[rgba(37,100,207,0.06)]">
+              <tr style={{ color: "var(--muted)" }} className="border-b border-[var(--line2)] bg-[rgba(0,120,212,0.06)]">
                 <th className="border-r border-[var(--line)] px-3 py-2">Medicine Name</th>
                 <th className="border-r border-[var(--line)] px-3 py-2">Dosage</th>
                 <th className="border-r border-[var(--line)] px-3 py-2">Frequency</th>
@@ -167,19 +187,20 @@ export default function PrescriptionSlip({
       {prescription.status === "APPROVED" && (
         <div className="pt-2 flex justify-end">
           <button
-            onClick={() => setShowPayModal(true)}
-            className="btn font-bold text-xs px-6 py-2.5 flex items-center gap-1.5"
-            style={{ background: "linear-gradient(135deg, var(--cyan), #14213d)", color: "white", border: "none" }}
+            onClick={handleStartPayment}
+            disabled={startingPayment}
+            className="btn font-bold text-xs px-6 py-2.5 flex items-center gap-1.5 disabled:opacity-60"
+            style={{ background: "linear-gradient(135deg, var(--cyan), #004578)", color: "white", border: "none" }}
           >
-            <CreditCard size={14} /> ⚡ Pay &amp; Collect Online
+            <CreditCard size={14} /> {startingPayment ? "Starting…" : "⚡ Pay & Collect Online"}
           </button>
         </div>
       )}
 
       {prescription.status === "PREPAID" && pickupToken && pickupToken.status !== "READY" && (
         <div className="mt-3 p-3.5 rounded-xl border space-y-3" style={{
-          background: pickupToken.status === "READY" ? "rgba(16,185,129,0.06)" : "rgba(37,100,207,0.06)",
-          borderColor: pickupToken.status === "READY" ? "rgba(16,185,129,0.2)" : "rgba(37,100,207,0.2)"
+          background: pickupToken.status === "READY" ? "rgba(16,185,129,0.06)" : "rgba(0,120,212,0.06)",
+          borderColor: pickupToken.status === "READY" ? "rgba(16,185,129,0.2)" : "rgba(0,120,212,0.2)"
         }}>
           {pickupToken.status === "WAITING" && (
             <div className="space-y-3">
@@ -252,13 +273,13 @@ export default function PrescriptionSlip({
 
       {/* Online Payment Modal */}
       <TestPaymentModal
-        open={showPayModal}
-        orderId={`rx_${prescription.rx_id}`}
-        amountPaise={Math.round(total * 100)}
+        open={showPayModal && !!pendingOrder}
+        orderId={pendingOrder?.order_id || ""}
+        amountPaise={pendingOrder?.amount ?? Math.round(total * 100)}
         title="Medication Payment"
         description={`Prescription: ${prescription.rx_id.slice(0, 8)}...`}
         onSuccess={handlePaymentSuccess}
-        onCancel={() => setShowPayModal(false)}
+        onCancel={() => { setShowPayModal(false); setPendingOrder(null); }}
       />
     </Card>
   );

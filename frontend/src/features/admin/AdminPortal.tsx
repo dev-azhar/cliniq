@@ -393,7 +393,7 @@ export default function AdminPortal() {
             {/* Lab Slot Timings Form */}
             <div className="space-y-4">
               <SectionTitle plain>Configure Operating Hours &amp; Slots</SectionTitle>
-              <Card className="space-y-4 relative overflow-hidden" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(37,100,207,0.06), transparent)" }}>
+              <Card className="space-y-4 relative overflow-hidden" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(0,120,212,0.06), transparent)" }}>
                 <div className="flex items-center justify-between mb-1 pb-2 border-b border-white/5">
                   <div className="flex items-center gap-2">
                     <Clock className="text-[var(--cyan)]" size={16} />
@@ -500,7 +500,7 @@ export default function AdminPortal() {
                     type="submit"
                     disabled={submitting}
                     className="btn w-full font-bold py-2.5 text-center"
-                    style={{ background: "linear-gradient(135deg, var(--cyan), #14213d)", color: "white", border: "none" }}
+                    style={{ background: "linear-gradient(135deg, var(--cyan), #004578)", color: "white", border: "none" }}
                   >
                     {submitting ? "Saving Lab Timings..." : "Save Lab Operating Schedule & Slots"}
                   </button>
@@ -564,7 +564,7 @@ export default function AdminPortal() {
           {!schedulingDoctor && (
             <>
               <SectionTitle plain>{editingDoctorId ? "Modify Practitioner" : "Onboard Practitioner"}</SectionTitle>
-              <Card className="space-y-4 relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(26,79,180,0.06), transparent)" }}>
+              <Card className="space-y-4 relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(0,69,120,0.06), transparent)" }}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     {editingDoctorId ? <Edit className="text-amber-400" size={16} /> : <Plus className="text-sky-500" size={16} />}
@@ -755,7 +755,7 @@ export default function AdminPortal() {
                       type="submit"
                       disabled={submitting}
                       className="btn font-bold py-2 flex-[2] text-center"
-                      style={{ background: editingDoctorId ? "linear-gradient(135deg, #f59e0b, #d97706)" : "linear-gradient(135deg, #1a4fb4, #003966)", color: "white", border: "none" }}
+                      style={{ background: editingDoctorId ? "linear-gradient(135deg, #f59e0b, #d97706)" : "linear-gradient(135deg, #0078d4, #004578)", color: "white", border: "none" }}
                     >
                       {submitting ? "Saving..." : editingDoctorId ? "Save Changes" : "Register Doctor"}
                     </button>
@@ -769,7 +769,7 @@ export default function AdminPortal() {
           {schedulingDoctor && (
             <>
               <SectionTitle plain>Roster Settings</SectionTitle>
-              <Card className="space-y-4 relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(37,100,207,0.06), transparent)" }}>
+              <Card className="space-y-4 relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(0,120,212,0.06), transparent)" }}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="text-[var(--cyan)]" size={16} />
@@ -863,7 +863,7 @@ export default function AdminPortal() {
                       type="submit"
                       disabled={submitting}
                       className="btn font-bold py-2 flex-[2] text-center"
-                      style={{ background: "linear-gradient(135deg, var(--cyan), #14213d)", color: "white", border: "none" }}
+                      style={{ background: "linear-gradient(135deg, var(--cyan), #004578)", color: "white", border: "none" }}
                     >
                       {submitting ? "Saving..." : "Save Roster"}
                     </button>

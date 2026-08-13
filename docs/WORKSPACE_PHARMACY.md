@@ -1,4 +1,4 @@
-# Qconnect — Pharmacy Module
+# ClinIQ — Pharmacy Module
 
 > **Audience:** Pharmacy module developer
 > Read `SYSTEM_FLOW_OVERVIEW.md` first for the big picture.
@@ -23,7 +23,7 @@ Simple lookup interface:
 
 ```
 ┌──────────────────────────────────────┐
-│  Pharmacy — Qconnect               │
+│  Pharmacy — ClinIQ                 │
 │                                      │
 │  Patient Lookup                      │
 │  Enter Mobile Number:                │
@@ -79,7 +79,7 @@ Pharmacist reviews prescription
       ✅ Prescription marked as Dispensed
       ✅ Timestamp recorded
       ✅ Patient app record updated:
-            "Prescription dispensed at Qconnect Pharmacy — 13 July 2026, 3:15 PM"
+            "Prescription dispensed at ClinIQ Pharmacy — 13 July 2026, 3:15 PM"
 ```
 
 ---

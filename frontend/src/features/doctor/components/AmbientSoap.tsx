@@ -443,9 +443,23 @@ export default function AmbientSoap({ encounterId, doctorName }: AmbientSoapProp
       setTranslatedSoap(null);
       return;
     }
-    // TODO: Implement translation endpoint (api.translateText) in backend
-    // For now, show original text in English
-    setTranslatedSoap(null);
+    // Call backend to translate the SOAP note to the target language
+    setTranslating(true);
+    try {
+      const result = await api.translateText(soap.result.draft_text, lang);
+      if (result.translated) {
+        setTranslatedSoap(result.translated_text);
+      } else {
+        setTranslatedSoap(soap.result.draft_text); // fallback to original if translation failed
+        setTranslateError(true);
+      }
+    } catch (err) {
+      console.error("Translation failed:", err);
+      setTranslateError(true);
+      setTranslatedSoap(null);
+    } finally {
+      setTranslating(false);
+    }
   }
 
   async function approve() {
@@ -585,7 +599,7 @@ export default function AmbientSoap({ encounterId, doctorName }: AmbientSoapProp
                 className="input text-xs select"
                 style={{ width: "auto", flex: "none" }}
                 value={viewLanguage}
-                onChange={(e) => viewInLanguage(e.target.value, draft.result.soap)}
+                onChange={(e) => viewInLanguage(e.target.value, draft)}
               >
                 {VIEW_LANGUAGES.map((l) => (
                   <option key={l.code} value={l.code}>{l.label}</option>

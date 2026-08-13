@@ -190,7 +190,7 @@ export default function CopilotSidepane({
   };
 
   const renderSummaryCard = () => (
-    <Card className="order-2 relative overflow-hidden" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(37,100,207,0.08), transparent)" }}>
+    <Card className="order-2 relative overflow-hidden" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(0,120,212,0.08), transparent)" }}>
       <div className={`flex items-center justify-between gap-2 ${summaryOpen ? "mb-2" : ""}`}>
         <button
           type="button"
@@ -232,7 +232,7 @@ export default function CopilotSidepane({
         <>
         {renderSummaryCard()}
         {/* Suggested Orders */}
-        <Card className="order-2 border border-dashed border-[var(--cyan)]/25 relative overflow-hidden" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(37,100,207,0.08), transparent)" }}>
+        <Card className="order-2 border border-dashed border-[var(--cyan)]/25 relative overflow-hidden" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(0,120,212,0.08), transparent)" }}>
           <div className="mb-2 flex items-center justify-between">
             <div className="flex items-center gap-1.5 font-extrabold text-[11px] text-[var(--cyan)] uppercase tracking-wider">
               <Activity size={13} /> Suggested Orders
@@ -246,7 +246,7 @@ export default function CopilotSidepane({
                 onClick={onGetSuggestions} 
                 disabled={loadingSuggestions} 
                 className="btn w-full !py-1 text-xs font-bold"
-                style={{ background: "rgba(37,100,207,0.08)", border: "1px solid rgba(37,100,207,0.25)", color: "var(--cyan)" }}
+                style={{ background: "rgba(0,120,212,0.08)", border: "1px solid rgba(0,120,212,0.25)", color: "var(--cyan)" }}
               >
                 {loadingSuggestions ? "Checking..." : "Get Suggested Orders"}
               </button>
@@ -315,7 +315,7 @@ export default function CopilotSidepane({
                       ? "border-amber-500/45 bg-amber-500/10 text-amber-800"
                       : isAbnormalVital(vital.key, vital.raw)
                       ? "border-red-500/45 bg-red-500/10 text-red-800"
-                      : "border-[var(--line)] bg-[rgba(37,100,207,0.04)]"
+                      : "border-[var(--line)] bg-[rgba(0,120,212,0.04)]"
                   } ${vital.label === "BMI" ? "col-span-2" : ""}`}
                 >
                   {(isTemperatureWarning(vital.key, vital.raw) || isAbnormalVital(vital.key, vital.raw)) && (
@@ -447,7 +447,7 @@ export default function CopilotSidepane({
           ) : (
             <div className="space-y-3 text-xs">
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <h4 className="font-bold text-slate-100" style={{ color: "#123a7a" }}>Clinical Decision Support</h4>
+                <h4 className="font-bold text-slate-100" style={{ color: "#004578" }}>Clinical Decision Support</h4>
                 <AgentBadge label="Rx CDS" />
               </div>
               {cds.block && (

@@ -151,7 +151,7 @@ export default function DoctorQueue({ onSelectPatient }: DoctorQueueProps) {
   const renderSessionToolbar = () => {
     if (!activeDoc || !isUnlocked) return null;
     return (
-      <Card className="flex flex-col md:flex-row md:items-center justify-between gap-3 !py-2.5 !px-4 relative overflow-hidden animate-in fade-in duration-200" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(37,100,207,0.04), transparent)" }}>
+      <Card className="flex flex-col md:flex-row md:items-center justify-between gap-3 !py-2.5 !px-4 relative overflow-hidden animate-in fade-in duration-200" style={{ background: "radial-gradient(150px 50px at 0% 0%, rgba(0,120,212,0.04), transparent)" }}>
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-full bg-[var(--cyan)]/10 border border-[var(--cyan)]/25 flex items-center justify-center text-[var(--cyan)] font-extrabold text-[12px]">
             {activeDoc.name.split(" ").slice(-1)[0][0]}
@@ -200,7 +200,7 @@ export default function DoctorQueue({ onSelectPatient }: DoctorQueueProps) {
               setSelectedDoctorId("");
             }}
             className="btn mx-auto font-bold"
-            style={{ background: "linear-gradient(135deg, var(--cyan), #14213d)", color: "white", border: "none" }}
+            style={{ background: "linear-gradient(135deg, var(--cyan), #004578)", color: "white", border: "none" }}
           >
             Reset Session &amp; Login
           </button>

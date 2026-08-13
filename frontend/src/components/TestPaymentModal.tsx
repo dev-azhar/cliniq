@@ -89,9 +89,9 @@ export default function TestPaymentModal({
       setPhase("success");
       window.setTimeout(() => {
         onSuccess({
-          razorpay_payment_id: `pay_test_${Math.random().toString(36).substring(2, 11)}`,
+          razorpay_payment_id: `pay_mock_${Math.random().toString(36).substring(2, 11)}`,
           razorpay_order_id: orderId,
-          razorpay_signature: `test_signature_${Math.random().toString(36).substring(2, 11)}`,
+          razorpay_signature: `mock_signature_${Math.random().toString(36).substring(2, 11)}`,
         });
         reset();
       }, 700);
@@ -122,7 +122,7 @@ export default function TestPaymentModal({
           >
             <div className="flex items-center gap-2 text-white">
               <ShieldCheck size={18} />
-              <span className="text-sm font-bold">Qconnect Test Checkout</span>
+              <span className="text-sm font-bold">ClinIQ Test Checkout</span>
             </div>
             {phase !== "processing" && (
               <button onClick={handleClose} className="text-white/80 hover:text-white" aria-label="Close">

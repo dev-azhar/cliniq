@@ -1,1 +1,1 @@
-"""Qconnect backend package."""
+"""ClinIQ backend package."""

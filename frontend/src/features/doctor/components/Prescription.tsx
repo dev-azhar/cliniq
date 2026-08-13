@@ -7,6 +7,21 @@ import { Card } from "../../../components/ui";
 
 type Item = { drug_name: string; dose: string; frequency: string; duration_days?: string | number | null; instructions?: string | null };
 
+// Parse an AI "active_ingredients" string (e.g. "Aspirin (75mg) + Clopidogrel (75mg)")
+// into individual { name, dose } entries for stock matching + prescription prefill.
+function parseIngredients(active?: string | null): { name: string; dose: string }[] {
+  if (!active) return [];
+  return active
+    .split(/\s*\+\s*/)
+    .map((part) => {
+      const doseMatch = part.match(/(\d+(?:\.\d+)?)\s*(mg|mcg|g|iu|ml|units?)/i);
+      const dose = doseMatch ? `${doseMatch[1]} ${doseMatch[2].toLowerCase()}` : "";
+      const name = (part.replace(/\([^)]*\)/g, "").match(/[A-Za-z][A-Za-z-]*(?:\s[A-Za-z][A-Za-z-]*)*/)?.[0] || "").trim();
+      return { name, dose };
+    })
+    .filter((x) => x.name.length > 1);
+}
+
 interface PrescriptionProps {
   encounterId: string;
   items: Item[];
@@ -111,6 +126,8 @@ export default function Prescription({
   const [loadingGuidance, setLoadingGuidance] = useState(false);
   const [guidanceData, setGuidanceData] = useState<any>(null);
   const [showGuidance, setShowGuidance] = useState(true);
+  // Maps a recommended generic name -> its live pharmacy-stock availability.
+  const [availability, setAvailability] = useState<Record<string, { stock_name: string; available: boolean; unit_price?: number }>>({});
 
   async function fetchGuidance() {
     setLoadingGuidance(true);
@@ -118,12 +135,65 @@ export default function Prescription({
       const res = await api.getFormularyGuidance(encounterId);
       setGuidanceData(res);
       setShowGuidance(true);
+
+      // Cross-reference each recommended generic against the full pharmacy catalog.
+      const names: string[] = Array.from(new Set(
+        (res.formula_recommendations || []).flatMap((f: any) =>
+          parseIngredients(f.active_ingredients).map((p) => p.name)
+        )
+      ));
+      const map: Record<string, { stock_name: string; available: boolean; unit_price?: number }> = {};
+      await Promise.all(names.map(async (n) => {
+        try {
+          const rows = await api.stock(n);
+          const inStock = (rows || []).find((r: any) => (r.available ?? 0) > 0);
+          const hit = inStock || (rows || [])[0];
+          if (hit) map[n.toLowerCase()] = { stock_name: hit.drug_name, available: Boolean(inStock), unit_price: hit.unit_price };
+        } catch {
+          /* unresolved -> treated as not available */
+        }
+      }));
+      setAvailability(map);
     } catch (err) {
       console.error("Failed to fetch formulary guidance:", err);
     } finally {
       setLoadingGuidance(false);
     }
   }
+
+  const availabilityFor = (f: any) =>
+    parseIngredients(f?.active_ingredients).map((p) => ({
+      ...p,
+      ...(availability[p.name.toLowerCase()] || { stock_name: "", available: false }),
+    }));
+
+  const addItemsToRx = (rows: { stock_name: string; dose: string; available: boolean }[]) => {
+    const seen = new Set(items.filter((it) => it.drug_name.trim()).map((it) => it.drug_name.toLowerCase().trim()));
+    const additions: Item[] = [];
+    for (const r of rows) {
+      if (!r.available || !r.stock_name) continue;
+      const key = r.stock_name.toLowerCase().trim();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      additions.push({ drug_name: r.stock_name, dose: r.dose || "", frequency: "1-0-1", duration_days: 5, instructions: null });
+    }
+    if (!additions.length) return;
+    setItems((s) => [...s.filter((it) => it.drug_name.trim()), ...additions]);
+    setCds(null);
+    setRxId(null);
+    setDone(null);
+    setErr(null);
+  };
+
+  const prefillAvailable = () =>
+    addItemsToRx((guidanceData?.formula_recommendations || []).flatMap((f: any) => availabilityFor(f)));
+
+  const availableCount = new Set(
+    (guidanceData?.formula_recommendations || [])
+      .flatMap((f: any) => availabilityFor(f))
+      .filter((r: any) => r.available)
+      .map((r: any) => r.stock_name.toLowerCase())
+  ).size;
 
   return (
     <div className="w-full animate-in fade-in duration-300 space-y-3">
@@ -163,7 +233,22 @@ export default function Prescription({
                 )}, active lab diagnostic reports ({guidanceData.ai_diagnostics_evaluated?.map((d: any) => d.test_name).join(", ") || "None"}), and medical history, here are the AI-suggested generic formulations:
               </span>
             </div>
-
+            {/* One-click prefill of in-stock recommended medicines */}
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-2">
+              <span className="text-[11px] font-medium text-emerald-200">
+                {availableCount > 0
+                  ? `${availableCount} recommended medicine${availableCount > 1 ? "s are" : " is"} available in pharmacy stock.`
+                  : "None of the recommended generics are currently in pharmacy stock."}
+              </span>
+              <button
+                type="button"
+                onClick={prefillAvailable}
+                disabled={availableCount === 0}
+                className="btn cyan text-[11px] !py-1 !px-3 inline-flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+              >
+                <Plus size={13} /> Prefill available into form
+              </button>
+            </div>
             {/* Suggested Generic Formulas List */}
             <div className="space-y-2 pt-1">
               <h5 className="font-semibold text-slate-300 text-xs">Generic Formula Recommendations for Clinical Consideration:</h5>
@@ -182,6 +267,32 @@ export default function Prescription({
                   <div className="mt-1 text-[10.5px] text-slate-400 italic">
                     💡 {f.clinical_rationale} ({f.safety_note})
                   </div>
+                  {(() => {
+                    const rows = availabilityFor(f);
+                    const anyAvail = rows.some((r) => r.available);
+                    return (
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-2">
+                        {rows.map((r, ri) => (
+                          <span
+                            key={ri}
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.available ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/10 text-amber-300"}`}
+                          >
+                            {r.available ? <CheckCircle2 size={11} /> : <AlertTriangle size={11} />}
+                            {r.available ? `In stock: ${r.stock_name}` : `${r.name}: not in stock`}
+                          </span>
+                        ))}
+                        {anyAvail && (
+                          <button
+                            type="button"
+                            onClick={() => addItemsToRx(rows)}
+                            className="ml-auto btn ghost text-[10px] !py-0.5 !px-2 inline-flex items-center gap-1"
+                          >
+                            <Plus size={11} /> Add to Rx
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -191,7 +302,7 @@ export default function Prescription({
 
       <Card className="space-y-4">
         <div className="mb-2 flex items-center justify-between">
-          <h4 className="font-bold text-slate-100" style={{ color: "#123a7a" }}>Prescription Form</h4>
+          <h4 className="font-bold text-slate-100" style={{ color: "#004578" }}>Prescription Form</h4>
           <div className="flex gap-1">
             <button type="button" className="chip" onClick={() => add({ drug_name: "Azithromycin 500mg", dose: "500 mg", frequency: "1-0-0", duration_days: 3 })}>+ Azithromycin</button>
             <button type="button" className="chip" onClick={() => add({ drug_name: "Paracetamol 650mg", dose: "650 mg", frequency: "SOS", duration_days: 5 })}>+ Paracetamol</button>
@@ -246,7 +357,7 @@ export default function Prescription({
                             type="button"
                             role="option"
                             key={suggestion.drug_name}
-                            className="flex w-full items-center justify-between gap-3 border-b border-[var(--line)] px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[rgba(37,100,207,0.08)]"
+                            className="flex w-full items-center justify-between gap-3 border-b border-[var(--line)] px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[rgba(0,120,212,0.08)]"
                             onMouseDown={(event) => {
                               event.preventDefault();
                               selectDrug(i, suggestion.drug_name);

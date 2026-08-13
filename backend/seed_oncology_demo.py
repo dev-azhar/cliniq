@@ -50,7 +50,7 @@ def seed_oncology_demo():
         db.add(p1)
         db.flush()
         db.add(models.ConsentArtifact(
-            patient_id=p1.patient_id, purpose="CARE_MGMT", hip_id="qconnect-hip", hiu_id="qconnect-hiu",
+            patient_id=p1.patient_id, purpose="CARE_MGMT", hip_id="cliniq-hip", hiu_id="cliniq-hiu",
             status="GRANTED", valid_from=now, valid_to=now + timedelta(days=180),
         ))
         dx1 = models.Diagnosis(
@@ -70,7 +70,7 @@ def seed_oncology_demo():
         ]:
             db.add(models.BiomarkerTest(
                 diagnosis_id=dx1.diagnosis_id, patient_id=p1.patient_id, marker_name=marker,
-                result=result, value=value, method=method, lab_name="Qconnect Molecular Diagnostics Lab",
+                result=result, value=value, method=method, lab_name="ClinIQ Molecular Diagnostics Lab",
                 tested_date=today - timedelta(days=65),
             ))
         reg1 = models.ChemoRegimen(
@@ -129,7 +129,7 @@ def seed_oncology_demo():
         db.add(p2)
         db.flush()
         db.add(models.ConsentArtifact(
-            patient_id=p2.patient_id, purpose="CARE_MGMT", hip_id="qconnect-hip", hiu_id="qconnect-hiu",
+            patient_id=p2.patient_id, purpose="CARE_MGMT", hip_id="cliniq-hip", hiu_id="cliniq-hiu",
             status="GRANTED", valid_from=now, valid_to=now + timedelta(days=180),
         ))
         dx2 = models.Diagnosis(
@@ -149,7 +149,7 @@ def seed_oncology_demo():
         ]:
             db.add(models.BiomarkerTest(
                 diagnosis_id=dx2.diagnosis_id, patient_id=p2.patient_id, marker_name=marker,
-                result=result, value=value, method=method, lab_name="Qconnect Molecular Diagnostics Lab",
+                result=result, value=value, method=method, lab_name="ClinIQ Molecular Diagnostics Lab",
                 tested_date=today - timedelta(days=8),
             ))
         db.add(models.TumorBoardCase(
@@ -188,7 +188,7 @@ def seed_oncology_demo():
         db.add(p3)
         db.flush()
         db.add(models.ConsentArtifact(
-            patient_id=p3.patient_id, purpose="CARE_MGMT", hip_id="qconnect-hip", hiu_id="qconnect-hiu",
+            patient_id=p3.patient_id, purpose="CARE_MGMT", hip_id="cliniq-hip", hiu_id="cliniq-hiu",
             status="GRANTED", valid_from=now, valid_to=now + timedelta(days=365),
         ))
         dx3 = models.Diagnosis(

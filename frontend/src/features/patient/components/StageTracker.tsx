@@ -56,7 +56,7 @@ export default function StageTracker({ stage, token }: StageTrackerProps) {
                     borderColor: done || current ? "var(--cyan)" : "var(--line2)",
                     background: done || current ? "linear-gradient(150deg,var(--cyan),var(--violet))" : "var(--bg2)",
                     color: done || current ? "#ffffff" : "var(--dim)",
-                    boxShadow: current ? "0 0 14px rgba(37,100,207,.55)" : "none",
+                    boxShadow: current ? "0 0 14px rgba(0,120,212,.55)" : "none",
                   }}
                   title={item.label}
                 >
@@ -87,7 +87,7 @@ export default function StageTracker({ stage, token }: StageTrackerProps) {
                   ? "border-[var(--cyan)] bg-[var(--cyan)]/5"
                   : "border-[var(--line2)]"
               }`}
-              style={{ background: current ? "rgba(37,100,207,0.05)" : "var(--panel)" }}
+              style={{ background: current ? "rgba(0,120,212,0.05)" : "var(--panel)" }}
             >
               <span className="mb-1 text-balance font-bold leading-tight" style={{ color: current ? "var(--ink)" : done ? "var(--muted)" : "var(--dim)" }}>
                 {s.label}

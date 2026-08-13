@@ -165,7 +165,7 @@ export default function DoctorWorkspace() {
       <div className="card relative overflow-hidden !p-3 sm:!p-3.5">
         <div
           className="pointer-events-none absolute inset-0"
-          style={{ background: "radial-gradient(360px 140px at 0% 0%, rgba(37,100,207,0.08), transparent)" }}
+          style={{ background: "radial-gradient(360px 140px at 0% 0%, rgba(0,120,212,0.08), transparent)" }}
         />
         <div className="relative space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2.5">
@@ -329,8 +329,8 @@ export default function DoctorWorkspace() {
 
             <div className="text-xs space-y-3">
               <div className="p-3.5 rounded-xl" style={{
-                background: "rgba(37, 100, 207, 0.08)",
-                border: "1px solid rgba(37, 100, 207, 0.18)"
+                background: "rgba(0,120,212, 0.08)",
+                border: "1px solid rgba(0,120,212, 0.18)"
               }}>
                 <div className="font-bold text-xs" style={{ color: "var(--muted)" }}>Current Active Clinical Complaint (Triage Assessment):</div>
                 <div className="text-sm font-extrabold mt-1" style={{ color: "var(--cyan)" }}>

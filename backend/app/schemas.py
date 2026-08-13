@@ -152,8 +152,8 @@ class ConsentRequest(BaseModel):
     patient_id: str
     purpose: str = "CARE_MGMT"
     hours: int = 24
-    hiu_id: str | None = "qconnect-hiu"
-    hip_id: str | None = "qconnect-hip"
+    hiu_id: str | None = "cliniq-hiu"
+    hip_id: str | None = "cliniq-hip"
 
 
 class VitalsIn(BaseModel):

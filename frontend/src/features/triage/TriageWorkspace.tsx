@@ -394,7 +394,7 @@ export default function Triage() {
                       </p>
                     </div>
                     {encounter.triage?.chief_complaint && (
-                      <div className="p-2 rounded border border-[var(--line)] bg-[rgba(37,100,207,0.05)] text-[11px] text-[var(--muted)]">
+                      <div className="p-2 rounded border border-[var(--line)] bg-[rgba(0,120,212,0.05)] text-[11px] text-[var(--muted)]">
                         <b>Complaint:</b> {encounter.triage.chief_complaint}
                       </div>
                     )}

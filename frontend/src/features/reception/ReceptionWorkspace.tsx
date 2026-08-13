@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ClipboardList, Search, UserPlus, CheckCircle, RefreshCw, Clock, ArrowRight } from "lucide-react";
+import { ClipboardList, Search, UserPlus, CheckCircle, RefreshCw, Clock, ArrowRight, Users, ListChecks } from "lucide-react";
 import { api } from "../../lib/api";
 import { Card, Metric, Empty, Tag } from "../../components/ui";
 import WalkInModal from "./components/WalkInModal";
@@ -146,9 +146,9 @@ export default function ReceptionWorkspace() {
 
       {/* Snapshot Cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Metric value={metrics?.headline?.patients_today ?? "—"} label="Total patients today" />
-        <Metric value={metrics?.headline?.in_queue ?? "—"} label="Patients in queue" />
-        <Metric value={metrics ? `${metrics.headline.door_to_doctor_min}m` : "—"} label="Avg wait time" />
+        <Metric value={metrics?.headline?.patients_today ?? "—"} label="Total patients today" icon={Users} accent="#0078D4" />
+        <Metric value={metrics?.headline?.in_queue ?? "—"} label="Patients in queue" icon={ListChecks} accent="#CA5010" />
+        <Metric value={metrics ? `${metrics.headline.door_to_doctor_min}m` : "—"} label="Avg wait time" icon={Clock} accent="#038387" />
         <Metric
           value={
             <button

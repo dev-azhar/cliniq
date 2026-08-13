@@ -40,7 +40,7 @@ export default function BillingDischarge({
   return (
     <div className="grid gap-3 lg:grid-cols-2 animate-in fade-in duration-300">
       <Card>
-        <h4 className="mb-2 font-bold text-slate-100" style={{ color: "#123a7a" }}>Invoice</h4>
+        <h4 className="mb-2 font-bold text-slate-100" style={{ color: "#004578" }}>Invoice</h4>
         {!inv ? <Empty>Loading…</Empty> : (
           <>
             {inv.lines.map((l: any, i: number) => (
@@ -60,7 +60,7 @@ export default function BillingDischarge({
       </Card>
 
       <Card>
-        <h4 className="mb-2 font-bold text-slate-100" style={{ color: "#123a7a" }}>Discharge</h4>
+        <h4 className="mb-2 font-bold text-slate-100" style={{ color: "#004578" }}>Discharge</h4>
         {!discharge ? (
           <>
             <p className="text-[13px]" style={{ color: "var(--muted)" }}>Documentation completeness is checked before closure, then the discharge bundle is pushed to the ABDM PHR.</p>
@@ -85,7 +85,7 @@ export default function BillingDischarge({
             <button 
               onClick={onBack}
               className="btn w-full mt-4"
-              style={{ background: "linear-gradient(135deg, var(--cyan), #14213d)", color: "white", border: "none" }}
+              style={{ background: "linear-gradient(135deg, var(--cyan), #004578)", color: "white", border: "none" }}
             >
               Close Visit &amp; Return to Queue
             </button>

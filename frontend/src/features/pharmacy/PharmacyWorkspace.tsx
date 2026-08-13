@@ -116,8 +116,8 @@ export default function PharmacyWorkspace() {
             onClick={() => setActiveTab("lookup")}
             className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12.5px] font-semibold transition"
             style={{
-              color: activeTab === "lookup" ? "#123a7a" : "var(--muted)",
-              background: activeTab === "lookup" ? "linear-gradient(90deg, rgba(37,100,207,.1), rgba(26,79,180,.1))" : "var(--panel)",
+              color: activeTab === "lookup" ? "#004578" : "var(--muted)",
+              background: activeTab === "lookup" ? "linear-gradient(90deg, rgba(0,120,212,.1), rgba(0,69,120,.1))" : "var(--panel)",
               border: `1px solid ${activeTab === "lookup" ? "var(--line2)" : "var(--glass-border)"}`,
             }}
           >
@@ -127,8 +127,8 @@ export default function PharmacyWorkspace() {
             onClick={() => setActiveTab("prepaid")}
             className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12.5px] font-semibold transition relative"
             style={{
-              color: activeTab === "prepaid" ? "#123a7a" : "var(--muted)",
-              background: activeTab === "prepaid" ? "linear-gradient(90deg, rgba(37,100,207,.1), rgba(26,79,180,.1))" : "var(--panel)",
+              color: activeTab === "prepaid" ? "#004578" : "var(--muted)",
+              background: activeTab === "prepaid" ? "linear-gradient(90deg, rgba(0,120,212,.1), rgba(0,69,120,.1))" : "var(--panel)",
               border: `1px solid ${activeTab === "prepaid" ? "var(--line2)" : "var(--glass-border)"}`,
             }}
           >
@@ -167,7 +167,7 @@ export default function PharmacyWorkspace() {
                 <button
                   type="submit"
                   className="btn font-bold text-xs px-5 py-2 flex items-center gap-1.5"
-                  style={{ background: "linear-gradient(135deg, var(--cyan), #14213d)", color: "white", border: "none" }}
+                  style={{ background: "linear-gradient(135deg, var(--cyan), #004578)", color: "white", border: "none" }}
                 >
                   <Search size={14} /> Search
                 </button>
@@ -201,7 +201,7 @@ export default function PharmacyWorkspace() {
                             className="w-full text-left p-3 rounded-xl border text-xs transition block hover:bg-white/5"
                             style={{
                               borderColor: isActive ? "var(--line2)" : "var(--glass-border)",
-                              background: isActive ? "rgba(37,100,207,0.05)" : "rgba(255,255,255,0.02)"
+                              background: isActive ? "rgba(0,120,212,0.05)" : "rgba(255,255,255,0.02)"
                             }}
                           >
                             <div className="font-bold text-white mb-0.5">{rx.patient_name}</div>
@@ -315,7 +315,7 @@ export default function PharmacyWorkspace() {
                         className="w-full text-left p-3 rounded-xl border text-xs transition block hover:bg-white/5"
                         style={{
                           borderColor: isActive ? "var(--line2)" : "var(--glass-border)",
-                          background: isActive ? "rgba(37,100,207,0.05)" : "rgba(255,255,255,0.02)"
+                          background: isActive ? "rgba(0,120,212,0.05)" : "rgba(255,255,255,0.02)"
                         }}
                       >
                         <div className="flex justify-between items-start mb-0.5">
@@ -416,7 +416,7 @@ export default function PharmacyWorkspace() {
                           onClick={() => readyMutation.mutate(activePrepaid.rx_id)}
                           disabled={readyMutation.isPending}
                           className="btn font-bold text-xs px-6 py-2.5 flex items-center gap-1.5"
-                          style={{ background: "linear-gradient(135deg, var(--cyan), #14213d)", color: "white", border: "none" }}
+                          style={{ background: "linear-gradient(135deg, var(--cyan), #004578)", color: "white", border: "none" }}
                         >
                           <PackageCheck size={15} /> Pack &amp; Mark Ready for Pickup
                         </button>

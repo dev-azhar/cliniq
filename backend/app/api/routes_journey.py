@@ -1982,7 +1982,7 @@ def get_discharge_report(encounter_id: str, db: Session = Depends(get_db)):
                 <tr>
                     <td style="text-align: left; vertical-align: middle;">
                         <div style="font-size: 24px; font-weight: 800; color: #2564cf; display: flex; align-items: center; gap: 8px;">
-                            🏥 QConnect Smart Hospital
+                            🏥 ClinIQ Smart Hospital
                         </div>
                         <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
                             ABDM Registered Digital Health Facility • Tel: +91 80 4910 2000

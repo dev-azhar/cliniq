@@ -18,7 +18,7 @@ export default function ConsultationSummary({
 }: ConsultationSummaryProps) {
   return (
     <Card className="space-y-3 animate-in fade-in duration-300">
-      <h4 className="font-bold text-sm flex items-center gap-2" style={{ color: "#123a7a" }}>
+      <h4 className="font-bold text-sm flex items-center gap-2" style={{ color: "#004578" }}>
         <FileText size={16} className="text-[var(--cyan)]" /> Doctor Consultation Summary
       </h4>
       {triage && (

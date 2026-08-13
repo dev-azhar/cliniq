@@ -1,4 +1,4 @@
-"""End-to-End Mock Seed — Qconnect Smart Hospital Platform
+"""End-to-End Mock Seed — ClinIQ Smart Hospital Platform
 =========================================================
 Seeds a complete, realistic hospital day covering EVERY workspace and workflow:
 

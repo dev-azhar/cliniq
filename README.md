@@ -1,4 +1,4 @@
-# Qconnect — Smart Hospital Patient Journey Platform
+# ClinIQ — Smart Hospital Patient Journey Platform
 
 > A futuristic, **100% open-source**, ABDM/ABHA-ready, agentic-AI platform that orchestrates the
 > full outpatient (OPD) journey — from **queue-free digital check-in** to **digital discharge** —
@@ -147,4 +147,4 @@ smart-hospital-platform/
 
 ---
 
-_Qconnect · v0.1 · open-source · built for a queue-free, AI-assisted, human-approved hospital._
+_ClinIQ · v0.1 · open-source · built for a queue-free, AI-assisted, human-approved hospital._

@@ -1,4 +1,4 @@
-# Qconnect — Admin / Command Center
+# ClinIQ — Admin / Command Center
 
 > **Audience:** Admin portal developer
 > Read `SYSTEM_FLOW_OVERVIEW.md` first for the big picture.
@@ -17,7 +17,7 @@ This is a **read-only analytics + alerting** dashboard. Admins do not perform cl
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│  Qconnect — Command Center          13 July 2026 | 11:42 AM           │
+│  ClinIQ — Command Center            13 July 2026 | 11:42 AM           │
 ├──────────────────────┬───────────────────────────────────────────────────┤
 │  TODAY'S SNAPSHOT    │  LIVE QUEUE MAP                                   │
 │                      │                                                   │
