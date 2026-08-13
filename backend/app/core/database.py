@@ -83,3 +83,18 @@ def init_db() -> None:
         column_type = "TIMESTAMP WITH TIME ZONE" if engine.dialect.name == "postgresql" else "TIMESTAMP"
         with engine.begin() as connection:
             connection.execute(text(f"ALTER TABLE lab_order ADD COLUMN sample_collected_ts {column_type}"))
+
+    # Keep existing demo databases compatible with the newer Staff EMR / login fields.
+    _staff_columns = {
+        "hpr_id": "VARCHAR(40)",
+        "experience_years": "INTEGER",
+        "room": "VARCHAR(20)",
+        "floor": "VARCHAR(20)",
+        "access_pin": "VARCHAR(40)",
+        "opd_fee": "FLOAT",
+    }
+    _existing_staff = {column["name"] for column in inspect(engine).get_columns("staff")}
+    for _name, _type in _staff_columns.items():
+        if _name not in _existing_staff:
+            with engine.begin() as connection:
+                connection.execute(text(f"ALTER TABLE staff ADD COLUMN {_name} {_type}"))

@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,69 @@ from app import models
 from app.core.database import get_db
 
 router = APIRouter(prefix="/api/v1/os", tags=["os-dashboard"])
+
+# Shared demo credential for the /os console. Any staff member can sign in with
+# their own access PIN, or with this password when PINs are not seeded.
+OS_DEMO_PASSWORD = "cliniq"
+
+# UI role tabs (LoginOS) → Staff.role values stored in the DB.
+_ROLE_MAP = {"doctor": "DOCTOR", "nurse": "NURSE", "admin": "OPS", "pharmacist": "PHARMACIST"}
+_ROLE_LABELS = {"DOCTOR": "Doctor", "NURSE": "Nurse", "OPS": "Administration", "PHARMACIST": "Pharmacist"}
+
+
+class OsLoginRequest(BaseModel):
+    username: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+    role: str = "Doctor"
+
+
+@router.post("/login")
+def os_login(body: OsLoginRequest, db: Session = Depends(get_db)) -> dict:
+    """Authenticate a staff member for the /os console.
+
+    Resolves the typed username against the Staff directory (by name or id) and
+    accepts either that member's ``access_pin`` or the shared demo password.
+    """
+    username = body.username.strip()
+    password = body.password.strip()
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Username and password are required.")
+
+    staff = db.scalars(select(models.Staff)).all()
+    match = next(
+        (s for s in staff if s.name.lower() == username.lower() or s.staff_id == username),
+        None,
+    )
+
+    pin_ok = bool(match and match.access_pin and password == match.access_pin)
+    demo_ok = password == OS_DEMO_PASSWORD
+    if not (pin_ok or demo_ok):
+        raise HTTPException(status_code=401, detail="Invalid credentials. Check your username and password.")
+
+    if match:
+        role = match.role
+        name = match.name
+        department = match.department
+        specialty = match.specialty
+        staff_id = match.staff_id
+    else:
+        # Demo sign-in for a name not in the directory: honour the selected role tab.
+        role = _ROLE_MAP.get(body.role.strip().lower(), "DOCTOR")
+        name = username
+        department = None
+        specialty = None
+        staff_id = None
+
+    return {
+        "staffId": staff_id,
+        "name": name,
+        "role": role,
+        "roleLabel": _ROLE_LABELS.get(role, body.role.strip().title() or "Staff"),
+        "department": department or specialty or "General",
+        "specialty": specialty,
+        "authenticatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+
 
 # Encounter lifecycle buckets used across the dashboard aggregations.
 _ACTIVE_ENCOUNTER = ("CHECKED_IN", "TRIAGED", "IN_CONSULT", "ADMITTED")

@@ -1,4 +1,5 @@
 import { useState, Fragment } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import {
   Search, Plus, Sparkles, Bell, ChevronDown, LayoutGrid, Users,
   ClipboardList, UserCog, FlaskConical, ScanLine, Pill, Scissors, HeartPulse,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { useOsOverview } from "./osApi";
+import { getOsSession, clearOsSession, osInitials } from "./osSession";
 
 /* ------------------------------------------------------------------ data --- */
 
@@ -3317,11 +3319,22 @@ function EmergencyView() {
 /* ------------------------------------------------------------------ page --- */
 
 export default function CommandCenterOS() {
+  const navigate = useNavigate();
+  const session = getOsSession();
   const [tab, setTab] = useState("Overview");
   const [copilotTab, setCopilotTab] = useState("Insights");
   const [activeNav, setActiveNav] = useState("Command Center");
   const [messages, setMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
   const [draft, setDraft] = useState("");
+  const [userMenu, setUserMenu] = useState(false);
+
+  const logout = () => {
+    clearOsSession();
+    navigate("/os/login", { replace: true });
+  };
+
+  // Route guard: no session → back to the login screen.
+  if (!session) return <Navigate to="/os/login" replace />;
 
   // Live data from the backend; merged over the static placeholders so the UI
   // still renders while loading or if the API is unavailable.
@@ -3367,7 +3380,7 @@ export default function CommandCenterOS() {
       }}
     >
       {/* ============================================================ TOP BAR */}
-      <header className="flex h-14 min-w-[1180px] shrink-0 items-center gap-3 border-b border-black/[0.06] bg-white/60 px-4 backdrop-blur-xl">
+      <header className="relative z-30 flex h-14 min-w-[1180px] shrink-0 items-center gap-3 border-b border-black/[0.06] bg-white/60 px-4 backdrop-blur-xl">
         <div className="flex w-[204px] items-center gap-2.5">
           <span className="grid h-9 w-9 place-items-center rounded-xl text-white" style={{ background: "linear-gradient(150deg,#3a96e0,#0078d4)", boxShadow: "0 6px 14px rgba(0,120,212,.24)" }}>
             <HeartPulse size={18} />
@@ -3408,14 +3421,30 @@ export default function CommandCenterOS() {
             <Bell size={17} />
             <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#D13438] px-1 text-[9px] font-bold text-white">12</span>
           </button>
-          <button type="button" className="flex items-center gap-2 rounded-xl border border-black/[0.07] bg-white/70 py-1 pl-1 pr-2">
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#0c3b63] text-[11px] font-bold text-white">DA</span>
-            <span className="hidden leading-tight sm:block">
-              <span className="block text-[12px] font-bold text-slate-700">Dr. Ahmed Ali</span>
-              <span className="block text-[10px] text-slate-400">Cardiology</span>
-            </span>
-            <ChevronDown size={14} className="text-slate-400" />
-          </button>
+          <div className="relative">
+            <button type="button" onClick={() => setUserMenu((v) => !v)} className="flex items-center gap-2 rounded-xl border border-black/[0.07] bg-white/70 py-1 pl-1 pr-2 hover:bg-white">
+              <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#0c3b63] text-[11px] font-bold text-white">{osInitials(session.name)}</span>
+              <span className="hidden leading-tight sm:block">
+                <span className="block text-[12px] font-bold text-slate-700">{session.name}</span>
+                <span className="block text-[10px] text-slate-400">{session.department}</span>
+              </span>
+              <ChevronDown size={14} className="text-slate-400" />
+            </button>
+            {userMenu && (
+              <>
+                <button type="button" aria-label="Close menu" onClick={() => setUserMenu(false)} className="fixed inset-0 z-10 cursor-default" />
+                <div className="absolute right-0 top-11 z-20 w-56 overflow-hidden rounded-xl border border-black/[0.08] bg-white shadow-[0_16px_40px_rgba(28,33,51,.16)]">
+                  <div className="border-b border-black/[0.06] px-3.5 py-3">
+                    <div className="text-[13px] font-bold text-slate-700">{session.name}</div>
+                    <div className="text-[11px] text-slate-400">{session.roleLabel} · {session.department}</div>
+                  </div>
+                  <button type="button" onClick={logout} className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[#b42026] hover:bg-[#fdf1f1]">
+                    <LogOut size={15} /> Sign out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 

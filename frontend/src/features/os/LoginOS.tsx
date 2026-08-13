@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   HeartPulse, ShieldCheck, Network, Users, PieChart, User, Lock, Eye, EyeOff,
-  KeyRound, Globe, ChevronDown, Stethoscope, MoreHorizontal,
+  KeyRound, Globe, ChevronDown, Stethoscope, MoreHorizontal, Loader2, AlertCircle,
 } from "lucide-react";
 import type { ComponentType } from "react";
+import { osLoginRequest, setOsSession } from "./osSession";
 
 const ROLES: { label: string; icon: ComponentType<{ size?: number | string }> }[] = [
   { label: "Doctor", icon: Stethoscope },
@@ -62,9 +63,32 @@ export default function LoginOS() {
   const navigate = useNavigate();
   const [role, setRole] = useState("Doctor");
   const [showPw, setShowPw] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const signIn = async (creds: { username: string; password: string; role: string }) => {
+    setError(null);
+    setLoading(true);
+    try {
+      const session = await osLoginRequest(creds);
+      setOsSession(session);
+      navigate("/os");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign-in failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/os");
+    if (!username.trim() || !password.trim()) {
+      setError("Please enter both your username and password.");
+      return;
+    }
+    void signIn({ username: username.trim(), password, role });
   };
 
   return (
@@ -154,11 +178,17 @@ export default function LoginOS() {
               </div>
 
               <form onSubmit={submit} className="mt-6 space-y-4">
+                {error && (
+                  <div className="flex items-start gap-2 rounded-xl border border-[#f0b7b9] bg-[#fdf1f1] px-3 py-2.5 text-[12.5px] font-medium text-[#b42026]">
+                    <AlertCircle size={15} className="mt-px shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
                 <div>
                   <label className="mb-1.5 block text-[12px] font-semibold text-slate-600">Email / Username</label>
                   <div className="flex h-11 items-center gap-2.5 rounded-xl border border-black/[0.1] bg-white px-3 text-slate-400 transition focus-within:border-[#0078d4] focus-within:ring-2 focus-within:ring-[rgba(0,120,212,.14)]">
                     <User size={16} />
-                    <input type="text" autoComplete="username" placeholder="Enter your email or username" className="w-full bg-transparent text-[13.5px] text-slate-700 outline-none placeholder:text-slate-400" />
+                    <input value={username} onChange={(e) => setUsername(e.target.value)} type="text" autoComplete="username" placeholder="Enter your email or username" className="w-full bg-transparent text-[13.5px] text-slate-700 outline-none placeholder:text-slate-400" />
                   </div>
                 </div>
 
@@ -166,7 +196,7 @@ export default function LoginOS() {
                   <label className="mb-1.5 block text-[12px] font-semibold text-slate-600">Password</label>
                   <div className="flex h-11 items-center gap-2.5 rounded-xl border border-black/[0.1] bg-white px-3 text-slate-400 transition focus-within:border-[#0078d4] focus-within:ring-2 focus-within:ring-[rgba(0,120,212,.14)]">
                     <Lock size={16} />
-                    <input type={showPw ? "text" : "password"} autoComplete="current-password" placeholder="Enter your password" className="w-full bg-transparent text-[13.5px] text-slate-700 outline-none placeholder:text-slate-400" />
+                    <input value={password} onChange={(e) => setPassword(e.target.value)} type={showPw ? "text" : "password"} autoComplete="current-password" placeholder="Enter your password" className="w-full bg-transparent text-[13.5px] text-slate-700 outline-none placeholder:text-slate-400" />
                     <button type="button" onClick={() => setShowPw((v) => !v)} className="shrink-0 text-slate-400 hover:text-slate-600" aria-label={showPw ? "Hide password" : "Show password"}>
                       {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -181,17 +211,21 @@ export default function LoginOS() {
                   <button type="button" className="text-[12.5px] font-semibold text-[#0a5aa8] hover:underline">Forgot password?</button>
                 </div>
 
-                <button type="submit" className="h-11 w-full rounded-xl bg-[#0078d4] text-[14px] font-semibold text-white shadow-[0_8px_20px_rgba(0,120,212,.28)] transition hover:bg-[#106ebe]">
-                  Sign In
+                <button type="submit" disabled={loading} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0078d4] text-[14px] font-semibold text-white shadow-[0_8px_20px_rgba(0,120,212,.28)] transition hover:bg-[#106ebe] disabled:cursor-not-allowed disabled:opacity-70">
+                  {loading ? <><Loader2 size={16} className="animate-spin" /> Signing in…</> : "Sign In"}
                 </button>
+
+                <p className="text-center text-[11.5px] text-slate-400">
+                  Demo: any staff name (e.g. <span className="font-semibold text-slate-500">Dr. Ahmed Ali</span>) with password <span className="font-semibold text-slate-500">cliniq</span>
+                </p>
               </form>
 
               <div className="my-5 flex items-center gap-3 text-[11px] font-medium text-slate-400">
                 <span className="h-px flex-1 bg-black/[0.08]" /> or <span className="h-px flex-1 bg-black/[0.08]" />
               </div>
 
-              <button type="button" onClick={() => navigate("/os")} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-black/[0.1] bg-white text-[13.5px] font-semibold text-slate-700 transition hover:bg-slate-50">
-                <KeyRound size={16} className="text-slate-500" /> Sign in with SSO
+              <button type="button" disabled={loading} onClick={() => void signIn({ username: "Dr. Ahmed Ali", password: "cliniq", role: "Doctor" })} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-black/[0.1] bg-white text-[13.5px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-70">
+                <KeyRound size={16} className="text-slate-500" /> Sign in with SSO (demo)
               </button>
 
               <p className="mt-6 text-center text-[12.5px] text-slate-500">
