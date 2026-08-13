@@ -143,6 +143,10 @@ def seed() -> None:
         # Surgery / OT domain (idempotent).
         from seed_surgery import seed_surgery
         seed_surgery(db)
+
+        # Imaging studies for the Patient 360 (idempotent).
+        from seed_imaging import seed_imaging
+        seed_imaging(db)
     finally:
         db.close()
 

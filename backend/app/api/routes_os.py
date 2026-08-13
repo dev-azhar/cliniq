@@ -519,7 +519,11 @@ def surgery(db: Session = Depends(get_db), _claims: dict = Depends(require_os_st
     }
 
 
-_LAB_FLAG_LABEL = {"H": "High", "HH": "Critical High", "L": "Low", "LL": "Critical Low", "N": "Normal"}
+_LAB_FLAG_LABEL = {
+    "H": "High", "HH": "Critical High", "L": "Low", "LL": "Critical Low", "N": "Normal", "": "Normal",
+    "HIGH": "High", "LOW": "Low", "CRITICAL": "Critical", "CRITICAL HIGH": "Critical High",
+    "CRITICAL LOW": "Critical Low", "ABNORMAL": "Abnormal", "NORMAL": "Normal",
+}
 
 
 @router.get("/patients")
@@ -568,21 +572,69 @@ def patient_overview(patient_id: str, db: Session = Depends(get_db), _claims: di
         select(models.LabOrder, models.LabResult)
         .join(models.LabResult, models.LabResult.lab_order_id == models.LabOrder.lab_order_id)
         .where(models.LabOrder.patient_id == patient_id)
-        .order_by(models.LabResult.resulted_ts.desc()).limit(8)
+        .order_by(models.LabResult.resulted_ts.desc()).limit(20)
     ).all()
     labs = []
     abnormal = 0
     for order, result in lab_rows:
         flag = (result.abnormal_flag or "N").upper()
-        if flag not in ("N", ""):
+        status_label = _LAB_FLAG_LABEL.get(flag, "Normal")
+        if status_label != "Normal":
             abnormal += 1
         val = f"{result.value:g} {result.unit or ''}".strip() if result.value is not None else "—"
+        rng = None
+        if result.reference_low is not None and result.reference_high is not None:
+            rng = f"{result.reference_low:g}–{result.reference_high:g}"
         labs.append({
             "test": result.analyte or order.test_name or "Lab",
             "value": val,
-            "status": _LAB_FLAG_LABEL.get(flag, "Normal"),
+            "result": f"{result.value:g}" if result.value is not None else "—",
+            "unit": result.unit or "",
+            "range": rng or "—",
+            "flag": flag,
+            "status": status_label,
             "date": (result.resulted_ts or order.ordered_ts).strftime("%d %b %Y, %I:%M %p"),
         })
+
+    vitals_history = [{
+        "date": v.captured_ts.strftime("%d %b %Y, %I:%M %p"),
+        "bp": f"{v.bp_systolic}/{v.bp_diastolic}" if v.bp_systolic else "—",
+        "hr": v.heart_rate, "spo2": v.spo2,
+        "temp": v.temperature, "rr": v.respiratory_rate,
+        "flag": bool(v.bp_systolic and (v.bp_systolic >= 140 or v.bp_systolic <= 90)),
+    } for v in db.scalars(
+        select(models.Vitals).where(models.Vitals.encounter_id.in_(enc_ids or [""]))
+        .order_by(models.Vitals.captured_ts.desc()).limit(10)
+    )] if enc_ids else []
+
+    _IMAGING_TYPES = ("SCAN", "IMAGING", "RADIOLOGY", "XRAY", "CT", "MRI", "ULTRASOUND")
+    imaging = [{
+        "name": d.title or d.doc_type,
+        "date": d.created_ts.strftime("%d %b %Y"),
+        "type": d.doc_type,
+        "uri": d.uri if (d.uri or "").startswith("http") else None,
+    } for d in db.scalars(
+        select(models.Document).where(models.Document.patient_id == patient_id)
+        .where(models.Document.doc_type.in_(_IMAGING_TYPES))
+        .order_by(models.Document.created_ts.desc()).limit(8)
+    )]
+    # Also surface radiology-type lab orders (X-ray / CT / MRI / USG / Echo / Angiography) as imaging.
+    _RAD_KEYWORDS = ("x-ray", "xray", "ct ", "ct scan", "mri", "ultrasound", "usg", "echo", "angiograph", "doppler", "mammogra", "scan", "radiograph")
+    for o in db.scalars(
+        select(models.LabOrder).where(models.LabOrder.patient_id == patient_id)
+        .order_by(models.LabOrder.ordered_ts.desc()).limit(20)
+    ):
+        label = f"{o.test_name or ''} {o.panel or ''}".lower()
+        if any(k in label for k in _RAD_KEYWORDS):
+            imaging.append({
+                "name": o.test_name or o.panel or "Imaging Study",
+                "date": o.ordered_ts.strftime("%d %b %Y"),
+                "type": (o.panel or "Radiology"),
+                "uri": o.attachment_uri if (o.attachment_uri or "").startswith("http") else None,
+            })
+    imaging = imaging[:8]
+
+
 
     meds = [{"name": m.drug_name, "dose": m.dosage or "—"} for m in db.scalars(
         select(models.PatientMedication).where(models.PatientMedication.patient_id == patient_id)
@@ -641,6 +693,8 @@ def patient_overview(patient_id: str, db: Session = Depends(get_db), _claims: di
         "allergies": allergies,
         "encounters": encounters,
         "careTeam": care_team,
+        "vitalsHistory": vitals_history,
+        "imaging": imaging,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
     }
 

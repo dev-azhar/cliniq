@@ -1063,15 +1063,25 @@ function OverviewTab() {
   );
 }
 
-function VitalsTab() {
+function VitalsTab({ data }: { data?: OsPatient }) {
+  const cards = data ? [
+    { label: "Blood Pressure", value: data.vitals.bp ?? "—", unit: "mmHg", color: "#0078d4" },
+    { label: "Heart Rate", value: data.vitals.hr != null ? String(data.vitals.hr) : "—", unit: "bpm", color: "#D13438" },
+    { label: "SpO₂", value: data.vitals.spo2 != null ? `${data.vitals.spo2}%` : "—", unit: "SpO₂", color: "#16a34a" },
+    { label: "Temperature", value: data.vitals.temp != null ? `${data.vitals.temp}°` : "—", unit: "°C", color: "#CA5010" },
+    { label: "Resp Rate", value: data.vitals.rr != null ? String(data.vitals.rr) : "—", unit: "br/min", color: "#8764B8" },
+  ] : VITAL_CARDS;
+  const history = data
+    ? data.vitalsHistory.map((v) => ({ t: v.date, bp: v.bp, hr: v.hr != null ? String(v.hr) : "—", spo2: v.spo2 != null ? `${v.spo2}%` : "—", temp: v.temp != null ? `${v.temp}°` : "—", rr: v.rr != null ? String(v.rr) : "—", src: "Encounter", flag: v.flag }))
+    : VITALS_TABLE;
   return (
     <div className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {VITAL_CARDS.map((v) => (
+        {cards.map((v) => (
           <div key={v.label} className={`${card} p-3`}>
             <div className="flex items-center justify-between">
               <span className="text-[11.5px] font-semibold text-slate-500">{v.label}</span>
-              <span className="text-[9.5px] text-slate-400">10:15 AM</span>
+              <span className="text-[9.5px] text-slate-400">{data?.vitals.capturedTs ?? "10:15 AM"}</span>
             </div>
             <div className="mt-0.5 flex items-baseline gap-1">
               <span className="text-[20px] font-extrabold text-slate-800" style={{ fontVariantNumeric: "tabular-nums" }}>{v.value}</span>
@@ -1083,13 +1093,14 @@ function VitalsTab() {
       </div>
       <div className={`${card} p-3`}>
         <PanelHead title="Historical Readings" action="View Full History" />
+        {history.length === 0 && <div className="py-4 text-center text-[11.5px] text-slate-400">No vitals recorded.</div>}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[520px] text-left text-[11.5px]">
             <thead><tr className={th}>
               <th className={cellHead}>Date &amp; Time</th><th className={cellHead}>BP</th><th className={cellHead}>HR</th><th className={cellHead}>SpO2</th><th className={cellHead}>Temp</th><th className={cellHead}>RR</th><th className="pb-1.5 font-bold">Source</th>
             </tr></thead>
             <tbody style={{ fontVariantNumeric: "tabular-nums" }}>
-              {VITALS_TABLE.map((r, i) => (
+              {history.map((r, i) => (
                 <tr key={i} className="border-t border-black/[0.05]">
                   <td className="py-1.5 pr-3 text-slate-600">{r.t}</td>
                   <td className="py-1.5 pr-3" style={{ color: r.flag ? "#D13438" : "#334155", fontWeight: r.flag ? 700 : 400 }}>{r.bp}</td>
@@ -1108,40 +1119,57 @@ function VitalsTab() {
   );
 }
 
-function LabsTab() {
+function LabsTab({ data }: { data?: OsPatient }) {
+  const labTone = (s: string) => (/critical/i.test(s) ? "#D13438" : /high|low/i.test(s) ? "#CA5010" : "#16a34a");
   return (
     <div className={`${card} p-3`}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <FilterChip icon={Calendar} label="07 May – 13 May 2024" />
+        <FilterChip icon={Calendar} label="Recent" />
         <FilterChip icon={Filter} label="All Results" />
         <FilterChip icon={FlaskConical} label="All Sources" />
         <button type="button" className="ml-auto flex items-center gap-1 rounded-lg border border-black/[0.08] bg-white/70 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600"><Download size={13} /> Download</button>
       </div>
+      {data && data.labs.length === 0 && <div className="py-6 text-center text-[11.5px] text-slate-400">No lab results for this patient.</div>}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-left text-[11.5px]">
           <thead><tr className={th}>
             <th className={cellHead}>Test</th><th className={cellHead}>Result</th><th className={cellHead}>Unit</th><th className={cellHead}>Reference Range</th><th className={cellHead}>Status</th><th className={cellHead}>Trend</th><th className="pb-1.5 font-bold">Collected On</th>
           </tr></thead>
           <tbody style={{ fontVariantNumeric: "tabular-nums" }}>
-            {LAB_GROUPS.map((g) => (
-              <Fragment key={g.group}>
-                <tr><td colSpan={7} className="pb-1 pt-3 text-[11px] font-bold text-[#0c3b63]">{g.group}</td></tr>
-                {g.rows.map((r) => {
-                  const tone = LAB_STATUS_TONE[r.status as keyof typeof LAB_STATUS_TONE];
-                  return (
-                    <tr key={r.test} className="border-t border-black/[0.05]">
-                      <td className="py-1.5 pr-3 font-semibold text-slate-700">{r.test}</td>
-                      <td className="py-1.5 pr-3 font-bold" style={{ color: tone }}>{r.result}</td>
-                      <td className="py-1.5 pr-3 text-slate-500">{r.unit}</td>
-                      <td className="py-1.5 pr-3 text-slate-500">{r.range}</td>
-                      <td className="py-1.5 pr-3"><Pill tone={tone}>{r.status}</Pill></td>
-                      <td className="py-1.5 pr-3"><Spark color={tone} /></td>
-                      <td className="py-1.5 text-slate-400">13 May 2024</td>
-                    </tr>
-                  );
-                })}
-              </Fragment>
-            ))}
+            {data
+              ? data.labs.map((r) => {
+                const tone = labTone(r.status);
+                return (
+                  <tr key={r.test + r.date} className="border-t border-black/[0.05]">
+                    <td className="py-1.5 pr-3 font-semibold text-slate-700">{r.test}</td>
+                    <td className="py-1.5 pr-3 font-bold" style={{ color: tone }}>{r.result}</td>
+                    <td className="py-1.5 pr-3 text-slate-500">{r.unit}</td>
+                    <td className="py-1.5 pr-3 text-slate-500">{r.range}</td>
+                    <td className="py-1.5 pr-3"><Pill tone={tone}>{r.status}</Pill></td>
+                    <td className="py-1.5 pr-3"><Spark color={tone} /></td>
+                    <td className="py-1.5 text-slate-400">{r.date}</td>
+                  </tr>
+                );
+              })
+              : LAB_GROUPS.map((g) => (
+                <Fragment key={g.group}>
+                  <tr><td colSpan={7} className="pb-1 pt-3 text-[11px] font-bold text-[#0c3b63]">{g.group}</td></tr>
+                  {g.rows.map((r) => {
+                    const tone = LAB_STATUS_TONE[r.status as keyof typeof LAB_STATUS_TONE];
+                    return (
+                      <tr key={r.test} className="border-t border-black/[0.05]">
+                        <td className="py-1.5 pr-3 font-semibold text-slate-700">{r.test}</td>
+                        <td className="py-1.5 pr-3 font-bold" style={{ color: tone }}>{r.result}</td>
+                        <td className="py-1.5 pr-3 text-slate-500">{r.unit}</td>
+                        <td className="py-1.5 pr-3 text-slate-500">{r.range}</td>
+                        <td className="py-1.5 pr-3"><Pill tone={tone}>{r.status}</Pill></td>
+                        <td className="py-1.5 pr-3"><Spark color={tone} /></td>
+                        <td className="py-1.5 text-slate-400">13 May 2024</td>
+                      </tr>
+                    );
+                  })}
+                </Fragment>
+              ))}
           </tbody>
         </table>
       </div>
@@ -1149,30 +1177,42 @@ function LabsTab() {
   );
 }
 
-function ImagingTab() {
-  const [sel, setSel] = useState(() => Math.max(0, IMAGING_STUDIES.findIndex((s) => s.active)));
-  const study = IMAGING_STUDIES[sel];
+function ImagingTab({ data }: { data?: OsPatient }) {
+  const studies = data
+    ? data.imaging.map((im) => ({ name: im.name, date: im.date, finding: im.type, report: `Document type: ${im.type}. Stored in the patient record.`, active: false, uri: im.uri }))
+    : IMAGING_STUDIES.map((s) => ({ ...s, uri: null as string | null }));
+  const [sel, setSel] = useState(0);
+  if (data && studies.length === 0) {
+    return (
+      <div className={`${card} p-6 text-center`}>
+        <ScanLine size={26} className="mx-auto mb-2 text-slate-300" />
+        <div className="text-[12.5px] font-semibold text-slate-500">No imaging studies on record</div>
+        <div className="text-[11px] text-slate-400">Radiology documents for this patient will appear here.</div>
+      </div>
+    );
+  }
+  const study = studies[Math.min(sel, studies.length - 1)];
   const selTone = study.finding === "Abnormal" ? "#D13438" : "#16a34a";
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <FilterChip icon={ScanLine} label="All Modalities" />
-        <FilterChip icon={Calendar} label="07 May – 13 May 2024" />
+        <FilterChip icon={Calendar} label="Recent" />
         <FilterChip icon={Filter} label="All Status" />
       </div>
       <div className="grid gap-3 lg:grid-cols-[1.3fr_1fr]">
         <div>
-          <div className="mb-2 text-[12px] font-bold text-[#0c3b63]">Imaging Studies ({IMAGING_STUDIES.length})</div>
+          <div className="mb-2 text-[12px] font-bold text-[#0c3b63]">Imaging Studies ({studies.length})</div>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-            {IMAGING_STUDIES.map((s, i) => {
+            {studies.map((s, i) => {
               const tone = s.finding === "Abnormal" ? "#D13438" : "#16a34a";
               return (
-                <button key={s.name} type="button" onClick={() => setSel(i)} className={`${card} overflow-hidden text-left transition ${i === sel ? "ring-2 ring-[#0078d4]" : ""}`}>
+                <button key={s.name + i} type="button" data-fn onClick={() => setSel(i)} className={`${card} overflow-hidden text-left transition ${i === sel ? "ring-2 ring-[#0078d4]" : ""}`}>
                   <div className="grid h-20 place-items-center bg-[linear-gradient(135deg,#1e293b,#0f172a)] text-slate-500"><ScanLine size={22} /></div>
                   <div className="p-2">
                     <div className="truncate text-[11px] font-semibold text-slate-700">{s.name}</div>
                     <div className="text-[9.5px] text-slate-400">{s.date}</div>
-                    <div className="mt-1"><Pill tone={tone}>AI: {s.finding}</Pill></div>
+                    <div className="mt-1"><Pill tone={tone}>{data ? s.finding : `AI: ${s.finding}`}</Pill></div>
                   </div>
                 </button>
               );
@@ -1186,9 +1226,9 @@ function ImagingTab() {
           </div>
           <div className="grid h-40 place-items-center rounded-lg bg-[linear-gradient(135deg,#1e293b,#0f172a)] text-slate-500"><Activity size={30} /></div>
           <div className="mt-2 rounded-lg border p-2.5" style={{ borderColor: `${selTone}30`, background: `${selTone}0d` }}>
-            <div className="mb-1 flex items-center gap-1.5"><Sparkles size={13} className="text-[#0a5aa8]" /><span className="text-[11.5px] font-bold text-slate-700">AI Findings</span><Pill tone={selTone}>{study.finding}</Pill></div>
+            <div className="mb-1 flex items-center gap-1.5"><Sparkles size={13} className="text-[#0a5aa8]" /><span className="text-[11.5px] font-bold text-slate-700">{data ? "Details" : "AI Findings"}</span><Pill tone={selTone}>{study.finding}</Pill></div>
             <p className="text-[11px] leading-snug text-slate-600">{study.report}</p>
-            <div className="mt-1 text-[9.5px] text-slate-400">Generated by ClinIQ AI · {study.date}</div>
+            {data && study.uri && <a href={study.uri} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-[10.5px] font-semibold text-[#0078d4]"><ExternalLink size={11} /> Open document</a>}
           </div>
         </div>
       </div>
@@ -1196,26 +1236,30 @@ function ImagingTab() {
   );
 }
 
-function MedsTab() {
+function MedsTab({ data }: { data?: OsPatient }) {
+  const meds = data ? data.medications.map((m) => ({ name: m.name, dose: m.dose, freq: "—", route: "—", by: "—", start: "—" })) : MEDS_ACTIVE;
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 rounded-xl border border-[rgba(209,52,56,.2)] bg-[rgba(209,52,56,.06)] px-3 py-2">
-        <TriangleAlert size={15} className="shrink-0 text-[#D13438]" />
-        <span className="flex-1 text-[11.5px] text-slate-600"><b className="text-[#b91c1c]">Potential Drug Interaction Detected</b> — Clopidogrel may interact with Omeprazole and reduce antiplatelet effect.</span>
-        <button type="button" className="shrink-0 rounded-md border border-[rgba(209,52,56,.3)] bg-white px-2 py-1 text-[10.5px] font-semibold text-[#b91c1c]">View Details</button>
-      </div>
+      {!data && (
+        <div className="flex items-center gap-2 rounded-xl border border-[rgba(209,52,56,.2)] bg-[rgba(209,52,56,.06)] px-3 py-2">
+          <TriangleAlert size={15} className="shrink-0 text-[#D13438]" />
+          <span className="flex-1 text-[11.5px] text-slate-600"><b className="text-[#b91c1c]">Potential Drug Interaction Detected</b> — Clopidogrel may interact with Omeprazole and reduce antiplatelet effect.</span>
+          <button type="button" className="shrink-0 rounded-md border border-[rgba(209,52,56,.3)] bg-white px-2 py-1 text-[10.5px] font-semibold text-[#b91c1c]">View Details</button>
+        </div>
+      )}
       <div className={`${card} p-3`}>
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-[12.5px] font-bold text-[#0c3b63]">Active Medications ({MEDS_ACTIVE.length})</h3>
+          <h3 className="text-[12.5px] font-bold text-[#0c3b63]">Active Medications ({meds.length})</h3>
           <button type="button" className="flex items-center gap-1 text-[11px] font-semibold text-[#0078d4]"><Plus size={13} /> Add Medication</button>
         </div>
+        {meds.length === 0 && <div className="py-6 text-center text-[11.5px] text-slate-400">No active medications.</div>}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-[11.5px]">
             <thead><tr className={th}>
               <th className={cellHead}>Medication</th><th className={cellHead}>Dose</th><th className={cellHead}>Frequency</th><th className={cellHead}>Route</th><th className={cellHead}>Prescribed By</th><th className={cellHead}>Start Date</th><th className="pb-1.5 font-bold">Status</th>
             </tr></thead>
             <tbody>
-              {MEDS_ACTIVE.map((m) => (
+              {meds.map((m) => (
                 <tr key={m.name} className="border-t border-black/[0.05]">
                   <td className="py-1.5 pr-3 font-semibold text-slate-700">{m.name}</td>
                   <td className="py-1.5 pr-3 text-slate-600">{m.dose}</td>
@@ -1230,21 +1274,23 @@ function MedsTab() {
           </table>
         </div>
       </div>
-      <div className={`${card} p-3`}>
-        <PanelHead title="Medication History" />
-        <div className="space-y-2">
-          {MEDS_HISTORY.map((m, i) => (
-            <div key={i} className="flex items-start gap-2.5 border-t border-black/[0.05] pt-2 first:border-0 first:pt-0">
-              <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: m.discontinued ? "#cbd5e1" : "#0078d4" }} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2"><span className="text-[12px] font-semibold text-slate-700">{m.name}</span>{m.discontinued && <Pill tone="#D13438">Discontinued</Pill>}</div>
-                <div className="text-[11px] text-slate-500">{m.detail}</div>
+      {!data && (
+        <div className={`${card} p-3`}>
+          <PanelHead title="Medication History" />
+          <div className="space-y-2">
+            {MEDS_HISTORY.map((m, i) => (
+              <div key={i} className="flex items-start gap-2.5 border-t border-black/[0.05] pt-2 first:border-0 first:pt-0">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: m.discontinued ? "#cbd5e1" : "#0078d4" }} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2"><span className="text-[12px] font-semibold text-slate-700">{m.name}</span>{m.discontinued && <Pill tone="#D13438">Discontinued</Pill>}</div>
+                  <div className="text-[11px] text-slate-500">{m.detail}</div>
+                </div>
+                <span className="shrink-0 text-[10px] text-slate-400">{m.when}</span>
               </div>
-              <span className="shrink-0 text-[10px] text-slate-400">{m.when}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -1445,19 +1491,24 @@ function CarePlanTab() {
   );
 }
 
-function EncountersTab() {
+function EncountersTab({ data }: { data?: OsPatient }) {
+  const encTone = (s: string) => (/emergency|admit/i.test(s) ? "#D13438" : /discharge|complete/i.test(s) ? "#16a34a" : "#0078d4");
+  const rows = data
+    ? data.encounters.map((e) => ({ type: e.type, dept: e.department, by: "—", date: `${e.date} ${e.time}`, note: e.status, tone: encTone(e.status) }))
+    : ENCOUNTERS;
   return (
     <div className={`${card} p-3`}>
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-[12.5px] font-bold text-[#0c3b63]">Encounter History</h3>
         <button type="button" className="text-[11px] font-semibold text-[#0078d4] hover:underline">View All Encounters</button>
       </div>
+      {rows.length === 0 && <div className="py-6 text-center text-[11.5px] text-slate-400">No encounters recorded.</div>}
       <div className="space-y-0">
-        {ENCOUNTERS.map((e, i) => (
+        {rows.map((e, i) => (
           <div key={i} className="flex gap-3">
             <div className="flex flex-col items-center pt-1.5">
               <span className="h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-white" style={{ background: e.tone }} />
-              {i < ENCOUNTERS.length - 1 && <span className="my-0.5 w-px flex-1 bg-black/[0.09]" />}
+              {i < rows.length - 1 && <span className="my-0.5 w-px flex-1 bg-black/[0.09]" />}
             </div>
             <div className="flex-1 border-b border-black/[0.05] pb-2.5">
               <div className="flex flex-wrap items-center gap-2">
@@ -1471,14 +1522,16 @@ function EncountersTab() {
           </div>
         ))}
       </div>
-      <div className="mt-2 flex items-center justify-between text-[10.5px] text-slate-400">
-        <span>Showing 1 to 5 of 28 encounters</span>
-        <div className="flex items-center gap-1">
-          {["1", "2", "3", "4", "5", "6", "…"].map((p, i) => (
-            <span key={i} className="grid h-6 min-w-6 place-items-center rounded-md px-1.5 font-semibold" style={{ background: i === 0 ? "#0078d4" : "transparent", color: i === 0 ? "#fff" : "#64748b" }}>{p}</span>
-          ))}
+      {!data && (
+        <div className="mt-2 flex items-center justify-between text-[10.5px] text-slate-400">
+          <span>Showing 1 to 5 of 28 encounters</span>
+          <div className="flex items-center gap-1">
+            {["1", "2", "3", "4", "5", "6", "…"].map((p, i) => (
+              <span key={i} className="grid h-6 min-w-6 place-items-center rounded-md px-1.5 font-semibold" style={{ background: i === 0 ? "#0078d4" : "transparent", color: i === 0 ? "#fff" : "#64748b" }}>{p}</span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -1649,7 +1702,8 @@ function PatientOverview({ data }: { data?: OsPatient }) {
         <div className={`${card} p-3`}>
           <PanelHead title="Recent Imaging" action="View All" />
           <div className="space-y-1.5">
-            {RECENT_IMAGING.map((im) => (
+            {data && data.imaging.length === 0 && <div className="text-[11px] text-slate-400">No imaging on record.</div>}
+            {(data ? data.imaging.map((im) => ({ name: im.name, date: im.date, finding: im.type })) : RECENT_IMAGING).map((im) => (
               <div key={im.name} className="flex items-center gap-2">
                 <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-[linear-gradient(135deg,#1e293b,#0f172a)] text-slate-500"><ScanLine size={15} /></div>
                 <div className="min-w-0 flex-1">
@@ -1796,14 +1850,14 @@ function PatientsView({ search = "" }: { search?: string }) {
       <div>
         {tab === "Overview" && <PatientOverview data={pt} />}
         {tab === "Timeline" && <TimelineTab />}
-        {tab === "Vitals" && <VitalsTab />}
-        {tab === "Labs" && <LabsTab />}
-        {tab === "Imaging" && <ImagingTab />}
-        {tab === "Medications" && <MedsTab />}
+        {tab === "Vitals" && <VitalsTab data={pt} />}
+        {tab === "Labs" && <LabsTab data={pt} />}
+        {tab === "Imaging" && <ImagingTab data={pt} />}
+        {tab === "Medications" && <MedsTab data={pt} />}
         {tab === "Procedures" && <ProceduresTab />}
         {tab === "Documents" && <DocumentsTab />}
         {tab === "Care Plan" && <CarePlanTab />}
-        {tab === "Encounters" && <EncountersTab />}
+        {tab === "Encounters" && <EncountersTab data={pt} />}
         {tab === "Notes" && <NotesTab />}
       </div>
     </div>

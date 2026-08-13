@@ -124,12 +124,14 @@ export interface OsPatient {
   riskLevel: string; abnormalLabs: number; department: string; status: string | null;
   admittedOn: string | null; admittedTime: string | null; attendingPhysician: string | null; attendingDept: string | null;
   vitals: { bp: string | null; hr: number | null; spo2: number | null; temp: number | null; rr: number | null; capturedTs: string | null };
-  labs: { test: string; value: string; status: string; date: string }[];
+  labs: { test: string; value: string; result: string; unit: string; range: string; flag: string; status: string; date: string }[];
   medications: { name: string; dose: string }[];
   problems: { name: string; onset: string | null }[];
   allergies: { substance: string; severity: string | null }[];
   encounters: { date: string; time: string; type: string; department: string; status: string }[];
   careTeam: { name: string; role: string; badge: string }[];
+  vitalsHistory: { date: string; bp: string; hr: number | null; spo2: number | null; temp: number | null; rr: number | null; flag: boolean }[];
+  imaging: { name: string; date: string; type: string; uri: string | null }[];
   generatedAt: string;
 }
 
