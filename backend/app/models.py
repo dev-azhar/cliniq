@@ -497,6 +497,26 @@ class PurchaseOrder(Base):
     value: Mapped[float] = mapped_column(Float, default=0.0)
 
 
+# ------------------------------------------------------------------------------------- Surgery / OT
+class Surgery(Base):
+    __tablename__ = "surgery"
+
+    surgery_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    or_room: Mapped[str] = mapped_column(String(12))  # "OR 1" .. "OR 5"
+    patient_name: Mapped[str] = mapped_column(String(120))
+    mrn: Mapped[str | None] = mapped_column(String(30))
+    procedure: Mapped[str] = mapped_column(String(160))
+    surgeon: Mapped[str] = mapped_column(String(120))
+    surgeon_role: Mapped[str | None] = mapped_column(String(60))
+    anesthetist: Mapped[str | None] = mapped_column(String(120))
+    anesthesia_type: Mapped[str | None] = mapped_column(String(40))
+    status: Mapped[str] = mapped_column(String(24), default="Scheduled")  # Scheduled / In Pre-Op / In Progress / Post-Op / Completed / Cancelled
+    priority: Mapped[str] = mapped_column(String(20), default="Routine")  # Routine / High / Emergency
+    scheduled_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    duration_min: Mapped[int] = mapped_column(Integer, default=60)
+    progress_pct: Mapped[int] = mapped_column(Integer, default=0)
+
+
 # ------------------------------------------------------------------------------------- Audit (immutable)
 class AuditLog(Base):
     __tablename__ = "audit_log"

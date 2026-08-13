@@ -93,3 +93,21 @@ export function useOsInventory() {
     staleTime: 15_000,
   });
 }
+
+export interface OsSurgery {
+  kpis: { scheduled: number; inPreOp: number; inProgress: number; postOp: number; completed: number; cancelled: number };
+  schedule: { time: string; or: string; name: string; mrn: string; proc: string; surgeon: string; srole: string; anes: string; arole: string; status: string; tone: string; dur: string; alert: boolean }[];
+  otStatus: { or: string; proc: string; pct: number; status: string; tone: string }[];
+  upcoming: { date: string; proc: string; surgeon: string; or: string }[];
+  currentSurgery: { name: string; mrn: string; or: string; procedure: string; surgeon: string; anesthesia: string; start: string; end: string; status: string } | null;
+  generatedAt: string;
+}
+
+export function useOsSurgery() {
+  return useQuery({
+    queryKey: ["os", "surgery"],
+    queryFn: () => fetchJson<OsSurgery>("/api/v1/os/surgery"),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+}

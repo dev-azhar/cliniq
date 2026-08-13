@@ -139,6 +139,10 @@ def seed() -> None:
         # Inventory / supply-chain domain (idempotent).
         from seed_inventory import seed_inventory
         seed_inventory(db)
+
+        # Surgery / OT domain (idempotent).
+        from seed_surgery import seed_surgery
+        seed_surgery(db)
     finally:
         db.close()
 

@@ -15,7 +15,7 @@ import {
   TrendingUp, Truck, Star, CreditCard, Wallet, Landmark,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
-import { useOsOverview, useOsBilling, useOsInventory } from "./osApi";
+import { useOsOverview, useOsBilling, useOsInventory, useOsSurgery } from "./osApi";
 import { getOsSession, clearOsSession, osInitials, fetchOsMe } from "./osSession";
 
 /* ------------------------------------------------------------------ data --- */
@@ -3391,23 +3391,31 @@ function Avatar({ name, tone }: { name: string; tone: string }) {
 
 function SurgeryView() {
   const [orTab, setOrTab] = useState("All ORs");
+  const { data: surg } = useOsSurgery();
+  const sk = surg?.kpis;
   const kpis = [
-    { label: "Scheduled", value: "32", icon: Calendar, color: "#0078d4" },
-    { label: "In Pre-Op", value: "8", icon: Stethoscope, color: "#8764B8" },
-    { label: "In Progress", value: "6", icon: Activity, color: "#CA5010" },
-    { label: "Post-Op / Recovery", value: "10", icon: HeartPulse, color: "#038387" },
-    { label: "Completed", value: "18", icon: CheckSquare, color: "#107C10" },
-    { label: "Cancelled", value: "2", icon: XCircle, color: "#D13438" },
+    { label: "Scheduled", value: sk ? String(sk.scheduled) : "32", icon: Calendar, color: "#0078d4" },
+    { label: "In Pre-Op", value: sk ? String(sk.inPreOp) : "8", icon: Stethoscope, color: "#8764B8" },
+    { label: "In Progress", value: sk ? String(sk.inProgress) : "6", icon: Activity, color: "#CA5010" },
+    { label: "Post-Op / Recovery", value: sk ? String(sk.postOp) : "10", icon: HeartPulse, color: "#038387" },
+    { label: "Completed", value: sk ? String(sk.completed) : "18", icon: CheckSquare, color: "#107C10" },
+    { label: "Cancelled", value: sk ? String(sk.cancelled) : "2", icon: XCircle, color: "#D13438" },
   ];
-  const orTabs = [["All ORs", 32], ["OR 1", 7], ["OR 2", 6], ["OR 3", 6], ["OR 4", 7], ["OR 5", 6]] as const;
-  const schedule = [
+  const schedule = surg?.schedule?.length ? surg.schedule : [
     { time: "08:00 AM", or: "OR 1", name: "Ahmed Khan", mrn: "CLN-00011223", proc: "Laparoscopic Cholecystectomy", surgeon: "Dr. Ahmed Ali", srole: "Chief Surgeon", anes: "Dr. Sara Khan", arole: "General", status: "In Progress", tone: "#CA5010", dur: "90 min", alert: false },
     { time: "09:45 AM", or: "OR 2", name: "Sara Ali", mrn: "CLN-00067890", proc: "Total Knee Replacement", surgeon: "Dr. Rehan Malik", srole: "Orthopedic", anes: "Dr. Imran Shah", arole: "Spinal", status: "In Progress", tone: "#CA5010", dur: "120 min", alert: true },
     { time: "11:30 AM", or: "OR 3", name: "Bilal Ahmed", mrn: "CLN-00011224", proc: "Robotic Prostatectomy", surgeon: "Dr. Ahmed Ali", srole: "Chief Surgeon", anes: "Dr. Ayesha Noor", arole: "General", status: "In Pre-Op", tone: "#8764B8", dur: "150 min", alert: false },
     { time: "01:30 PM", or: "OR 4", name: "Maryam Khan", mrn: "CLN-00033445", proc: "Hysterectomy", surgeon: "Dr. Saba Fatima", srole: "Gynecologist", anes: "Dr. Sara Khan", arole: "General", status: "Scheduled", tone: "#334155", dur: "90 min", alert: false },
     { time: "03:15 PM", or: "OR 5", name: "Usman Tariq", mrn: "CLN-00055678", proc: "Shoulder Arthroscopy", surgeon: "Dr. Rehan Malik", srole: "Orthopedic", anes: "Dr. Imran Shah", arole: "Regional", status: "Scheduled", tone: "#334155", dur: "60 min", alert: false },
   ];
-  const otStatus = [
+  const orCounts = schedule.reduce((acc, r) => { acc[r.or] = (acc[r.or] || 0) + 1; return acc; }, {} as Record<string, number>);
+  const orTabs: readonly (readonly [string, number])[] = [["All ORs", schedule.length], ...["OR 1", "OR 2", "OR 3", "OR 4", "OR 5"].map((o) => [o, orCounts[o] || 0] as const)];
+  const cur = surg?.currentSurgery;
+  const today = new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+  const curFields: [string, string][] = cur
+    ? [["Procedure", cur.procedure], ["Surgeon", cur.surgeon], ["Anesthesia", cur.anesthesia], ["Start Time", cur.start], ["Expected End", cur.end]]
+    : [["Procedure", "Laparoscopic Cholecystectomy"], ["Surgeon", "Dr. Ahmed Ali"], ["Anesthesia", "Dr. Sara Khan (General)"], ["Start Time", "08:00 AM"], ["Expected End", "09:30 AM (in 35 min)"]];
+  const otStatus = surg?.otStatus?.length ? surg.otStatus : [
     { or: "OR 1", proc: "Laparoscopic Cholecystectomy", pct: 80, status: "In Progress", tone: "#CA5010" },
     { or: "OR 2", proc: "Total Knee Replacement", pct: 65, status: "In Progress", tone: "#CA5010" },
     { or: "OR 3", proc: "Robotic Prostatectomy", pct: 40, status: "In Pre-Op", tone: "#8764B8" },
@@ -3435,7 +3443,7 @@ function SurgeryView() {
     { label: "EtCO₂", value: "35 mmHg", color: "#CA5010" },
     { label: "Temp", value: "36.6 °C", color: "#038387" },
   ];
-  const upcoming = [
+  const upcoming = surg?.upcoming?.length ? surg.upcoming : [
     { date: "May 21, 08:00 AM", proc: "Heart Bypass Surgery", surgeon: "Dr. Ahmed Ali", or: "OR 1" },
     { date: "May 21, 10:30 AM", proc: "Liver Resection", surgeon: "Dr. Faisal Rana", or: "OR 2" },
     { date: "May 21, 01:00 PM", proc: "Spine Fusion", surgeon: "Dr. Rehan Malik", or: "OR 3" },
@@ -3455,7 +3463,7 @@ function SurgeryView() {
         {/* OR Schedule */}
         <div className={`${card} p-3`}>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-[13px] font-bold text-[#0c3b63]">OR Schedule <span className="text-[10px] font-normal text-slate-400">· Today, May 20, 2024</span></h3>
+            <h3 className="text-[13px] font-bold text-[#0c3b63]">OR Schedule <span className="text-[10px] font-normal text-slate-400">· Today, {today}</span></h3>
             <div className="flex items-center gap-1.5">
               <button type="button" className="flex items-center gap-1 rounded-lg border border-black/[0.08] bg-white/70 px-2 py-1 text-[10.5px] font-semibold text-slate-600"><Filter size={12} /> Filters</button>
               <button type="button" className="flex items-center gap-1 rounded-lg border border-black/[0.08] bg-white/70 px-2 py-1 text-[10.5px] font-semibold text-slate-600"><Columns3 size={12} /> Columns</button>
@@ -3491,7 +3499,7 @@ function SurgeryView() {
               </tbody>
             </table>
           </div>
-          <div className="mt-2 text-[11px] text-slate-400">Showing 1 to 5 of 32 surgeries</div>
+          <div className="mt-2 text-[11px] text-slate-400">Showing {schedule.length} active {schedule.length === 1 ? "case" : "cases"} on today's board</div>
         </div>
 
         {/* Live OT Status */}
@@ -3517,13 +3525,13 @@ function SurgeryView() {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <div className={`${card} p-3`}>
           <div className="mb-2 flex items-center justify-between"><h3 className="text-[12.5px] font-bold text-[#0c3b63]">Current Surgery <span className="text-[9.5px] font-normal text-slate-400">· OR 1</span></h3><button type="button" className="text-[10.5px] font-semibold text-[#0078d4]">View Details</button></div>
-          <div className="flex items-center gap-2.5"><Avatar name="Ahmed Khan" tone="#0078d4" /><div className="min-w-0"><div className="truncate text-[12.5px] font-bold text-slate-700">Ahmed Khan</div><div className="text-[9.5px] text-slate-400">MRN: CLN-00011223 · 58 Y, M · O+</div></div></div>
+          <div className="flex items-center gap-2.5"><Avatar name={cur?.name ?? "Ahmed Khan"} tone="#0078d4" /><div className="min-w-0"><div className="truncate text-[12.5px] font-bold text-slate-700">{cur?.name ?? "Ahmed Khan"}</div><div className="text-[9.5px] text-slate-400">MRN: {cur?.mrn ?? "CLN-00011223"} · {cur?.or ?? "OR 1"}</div></div></div>
           <div className="mt-2.5 space-y-1.5 border-t border-black/[0.06] pt-2.5 text-[11px]">
-            {[["Procedure", "Laparoscopic Cholecystectomy"], ["Surgeon", "Dr. Ahmed Ali"], ["Anesthesia", "Dr. Sara Khan (General)"], ["Start Time", "08:00 AM"], ["Expected End", "09:30 AM (in 35 min)"]].map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-2"><span className="text-slate-400">{k}</span><span className="text-right font-semibold text-slate-600">{v}</span></div>
+            {curFields.map(([kk, vv]) => (
+              <div key={kk} className="flex justify-between gap-2"><span className="text-slate-400">{kk}</span><span className="text-right font-semibold text-slate-600">{vv}</span></div>
             ))}
           </div>
-          <div className="mt-2"><Pill tone="#CA5010">In Progress</Pill></div>
+          <div className="mt-2"><Pill tone="#CA5010">{cur?.status ?? "In Progress"}</Pill></div>
         </div>
 
         <div className={`${card} p-3`}>

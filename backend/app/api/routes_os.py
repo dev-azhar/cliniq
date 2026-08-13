@@ -441,3 +441,82 @@ def inventory(db: Session = Depends(get_db), _claims: dict = Depends(require_os_
     }
 
 
+_SURGERY_TONE = {
+    "In Progress": "#CA5010", "In Pre-Op": "#8764B8", "Scheduled": "#334155",
+    "Post-Op": "#038387", "Completed": "#16a34a", "Cancelled": "#D13438", "Available": "#16a34a", "Cleaning": "#0078d4",
+}
+
+
+@router.get("/surgery")
+def surgery(db: Session = Depends(get_db), _claims: dict = Depends(require_os_staff)) -> dict:
+    """Surgery / OT Command Center — KPIs, OR schedule, live OT status, upcoming."""
+    surgeries = db.scalars(select(models.Surgery)).all()
+
+    def _count(status: str) -> int:
+        return sum(1 for s in surgeries if s.status == status)
+
+    kpis = {
+        "scheduled": _count("Scheduled"),
+        "inPreOp": _count("In Pre-Op"),
+        "inProgress": _count("In Progress"),
+        "postOp": _count("Post-Op"),
+        "completed": _count("Completed"),
+        "cancelled": _count("Cancelled"),
+    }
+
+    def _fmt_time(dt: datetime) -> str:
+        dt = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+        return dt.strftime("%I:%M %p").lstrip("0")
+
+    ordered = sorted(surgeries, key=lambda s: s.scheduled_start)
+    schedule = [{
+        "time": _fmt_time(s.scheduled_start), "or": s.or_room, "name": s.patient_name, "mrn": s.mrn or "—",
+        "proc": s.procedure, "surgeon": s.surgeon, "srole": s.surgeon_role or "",
+        "anes": s.anesthetist or "—", "arole": s.anesthesia_type or "", "status": s.status,
+        "tone": _SURGERY_TONE.get(s.status, "#334155"), "dur": f"{s.duration_min} min",
+        "alert": s.priority in ("High", "Emergency") and s.status == "In Progress",
+    } for s in ordered if s.status not in ("Completed", "Cancelled", "Post-Op")][:8]
+
+    # Live OT status: latest active surgery per OR room.
+    active_by_or: dict[str, models.Surgery] = {}
+    for s in ordered:
+        if s.status in ("In Progress", "In Pre-Op", "Scheduled"):
+            active_by_or.setdefault(s.or_room, s)
+    ot_status = []
+    for orr in sorted({s.or_room for s in surgeries}):
+        active = active_by_or.get(orr)
+        if active:
+            ot_status.append({"or": orr, "proc": active.procedure, "pct": active.progress_pct,
+                              "status": active.status, "tone": _SURGERY_TONE.get(active.status, "#334155")})
+        else:
+            ot_status.append({"or": orr, "proc": "Available", "pct": 0, "status": "Available", "tone": "#16a34a"})
+
+    upcoming = [{
+        "date": _fmt_time(s.scheduled_start), "proc": s.procedure, "surgeon": s.surgeon, "or": s.or_room,
+    } for s in ordered if s.status == "Scheduled" and s.priority in ("High", "Emergency")][:4]
+    if not upcoming:
+        upcoming = [{"date": _fmt_time(s.scheduled_start), "proc": s.procedure, "surgeon": s.surgeon, "or": s.or_room}
+                    for s in ordered if s.status == "Scheduled"][:4]
+
+    current = next((s for s in ordered if s.status == "In Progress"), None)
+    current_surgery = None
+    if current:
+        end = current.scheduled_start + timedelta(minutes=current.duration_min)
+        current_surgery = {
+            "name": current.patient_name, "mrn": current.mrn or "—", "or": current.or_room,
+            "procedure": current.procedure, "surgeon": current.surgeon,
+            "anesthesia": f"{current.anesthetist or '—'} ({current.anesthesia_type or '—'})",
+            "start": _fmt_time(current.scheduled_start), "end": _fmt_time(end), "status": current.status,
+        }
+
+    return {
+        "kpis": kpis,
+        "schedule": schedule,
+        "otStatus": ot_status,
+        "upcoming": upcoming,
+        "currentSurgery": current_surgery,
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+
