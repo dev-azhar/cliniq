@@ -1,4 +1,5 @@
 import { useState, useEffect, Fragment } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "react-router-dom";
 import {
   Search, Plus, Sparkles, Bell, ChevronDown, LayoutGrid, Users,
@@ -3324,6 +3325,42 @@ function donutGradient(segs: { pct: number; color: string }[]): string {
   return segs.map((s) => { const seg = `${s.color} ${acc}% ${acc + s.pct}%`; acc += s.pct; return seg; }).join(", ");
 }
 
+/* Lightweight toast bus so any control can acknowledge a click. */
+let _toastListeners: ((m: string) => void)[] = [];
+function toast(msg: string) { _toastListeners.forEach((l) => l(msg)); }
+function Toaster() {
+  const [items, setItems] = useState<{ id: number; msg: string }[]>([]);
+  useEffect(() => {
+    const on = (msg: string) => {
+      const id = Date.now() + Math.random();
+      setItems((s) => [...s.slice(-3), { id, msg }]);
+      setTimeout(() => setItems((s) => s.filter((i) => i.id !== id)), 2600);
+    };
+    _toastListeners.push(on);
+    return () => { _toastListeners = _toastListeners.filter((l) => l !== on); };
+  }, []);
+  return (
+    <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
+      {items.map((i) => (
+        <div key={i.id} className="pointer-events-auto flex items-center gap-2 rounded-xl border border-black/10 bg-white/95 px-3.5 py-2.5 text-[12.5px] font-semibold text-slate-700 shadow-[0_12px_30px_rgba(28,33,51,.18)] backdrop-blur">
+          <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#0078d4] text-white"><CheckSquare size={12} /></span>
+          {i.msg}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Decorative/navigational labels that have no destination yet — acknowledge with a toast.
+const _DECOR_LABEL = /^(view all|view report|view analytics|view details|view map|view queue|view list|view occupancy|view full report|view denial report|view recovery|view schedule|view patients|view live|view summary|view delays|filters|columns|export|quick action|contact support|contact it admin|forgot password\?|edit|share|download|more options|notifications|all floors|main ot complex)$/i;
+
+function handleConsoleClick(e: React.MouseEvent) {
+  const btn = (e.target as HTMLElement).closest("button");
+  if (!btn || btn.dataset.fn) return;
+  const label = (btn.getAttribute("aria-label") || btn.textContent || "").trim();
+  if (label && (/^view\s/i.test(label) || _DECOR_LABEL.test(label))) toast(`${label} — coming soon`);
+}
+
 function KpiRow({ items }: { items: { label: string; value: string; icon: ComponentType<{ size?: number | string }>; color: string; sub?: string }[] }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
@@ -3342,6 +3379,7 @@ function KpiRow({ items }: { items: { label: string; value: string; icon: Compon
 }
 
 function ViewHead({ title, subtitle }: { title: string; subtitle: string }) {
+  const qc = useQueryClient();
   return (
     <div className="flex items-center justify-between">
       <div>
@@ -3349,8 +3387,8 @@ function ViewHead({ title, subtitle }: { title: string; subtitle: string }) {
         <p className="text-[12px] text-slate-400">{subtitle}</p>
       </div>
       <div className="flex items-center gap-1.5">
-        <button type="button" className="flex items-center gap-1 rounded-lg border border-black/[0.08] bg-white/70 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600"><RefreshCw size={12} /> Refresh</button>
-        <button type="button" className="grid h-8 w-8 place-items-center rounded-lg border border-black/[0.07] bg-white/70 text-slate-400"><MoreHorizontal size={18} /></button>
+        <button type="button" data-fn onClick={() => { qc.invalidateQueries({ queryKey: ["os"] }); toast("Refreshing live data…"); }} className="flex items-center gap-1 rounded-lg border border-black/[0.08] bg-white/70 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-white"><RefreshCw size={12} /> Refresh</button>
+        <button type="button" aria-label="More options" className="grid h-8 w-8 place-items-center rounded-lg border border-black/[0.07] bg-white/70 text-slate-400"><MoreHorizontal size={18} /></button>
       </div>
     </div>
   );
@@ -3708,7 +3746,7 @@ function BillingView() {
               <th className={cellHead}>Invoice #</th><th className={cellHead}>Patient</th><th className={cellHead}>MRN</th><th className={cellHead}>Date</th><th className={cellHead}>Visit Type</th><th className={cellHead}>Gross Amount</th><th className={cellHead}>Balance Due</th><th className={cellHead}>Status</th><th className={cellHead}>Due Date</th><th className="pb-1.5 font-bold">Actions</th>
             </tr></thead>
             <tbody>
-              {invoices.map((r) => (
+              {(wlTab === "All" ? invoices : invoices.filter((r) => r.status === wlTab)).map((r) => (
                 <tr key={r.invoice} className="border-t border-black/[0.05]">
                   <td className="py-1.5 pr-3 font-semibold text-[#0078d4]">{r.invoice}</td>
                   <td className="py-1.5 pr-3 font-semibold text-slate-700">{r.name}</td>
@@ -3902,7 +3940,7 @@ function InventoryView() {
               <th className={cellHead}>Item Code</th><th className={cellHead}>Item Name</th><th className={cellHead}>Category</th><th className={cellHead}>Unit</th><th className={cellHead}>Current Stock</th><th className={cellHead}>Min Level</th><th className={cellHead}>Max Level</th><th className={cellHead}>Status</th><th className={cellHead}>Last Updated</th><th className="pb-1.5 font-bold">Actions</th>
             </tr></thead>
             <tbody>
-              {items.map((r) => (
+              {(wlTab === "All Items" ? items : items.filter((r) => r.status === wlTab)).map((r) => (
                 <tr key={r.code} className="border-t border-black/[0.05]">
                   <td className="py-1.5 pr-3 font-semibold text-[#0078d4]">{r.code}</td>
                   <td className="py-1.5 pr-3 font-semibold text-slate-700">{r.name}</td>
@@ -4077,6 +4115,7 @@ export default function CommandCenterOS() {
 
   return (
     <div
+      onClick={handleConsoleClick}
       className="flex h-screen flex-col overflow-x-auto overflow-y-hidden text-slate-800"
       style={{
         fontFamily: '"Segoe UI Variable Text","Segoe UI",Inter,system-ui,sans-serif',
@@ -4086,6 +4125,7 @@ export default function CommandCenterOS() {
           "linear-gradient(180deg,#f6f4ef,#fbfaf7)",
       }}
     >
+      <Toaster />
       {/* ============================================================ TOP BAR */}
       <header className="relative z-30 flex h-14 min-w-[1180px] shrink-0 items-center gap-3 border-b border-black/[0.06] bg-white/60 px-4 backdrop-blur-xl">
         <div className="flex w-[204px] items-center gap-2.5">
@@ -4124,7 +4164,7 @@ export default function CommandCenterOS() {
           <button type="button" onClick={() => setCopilotTab("Ask Copilot")} className="flex items-center gap-1.5 rounded-xl border border-[rgba(0,120,212,.35)] bg-white/70 px-3 py-2 text-[12.5px] font-semibold text-[#0a5aa8] hover:bg-[rgba(220,236,249,.4)]">
             <Sparkles size={15} /> Copilot
           </button>
-          <button type="button" className="relative grid h-9 w-9 place-items-center rounded-xl border border-black/[0.07] bg-white/70 text-slate-500">
+          <button type="button" aria-label="Notifications" className="relative grid h-9 w-9 place-items-center rounded-xl border border-black/[0.07] bg-white/70 text-slate-500">
             <Bell size={17} />
             <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#D13438] px-1 text-[9px] font-bold text-white">12</span>
           </button>
