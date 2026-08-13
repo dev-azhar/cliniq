@@ -12,6 +12,7 @@ import {
   Brain, Bone, Waves, ZoomIn, Move, Contrast, SlidersHorizontal, Ruler, Triangle,
   RotateCcw, Film, Copy, SunMedium, Bold, Italic, Underline, List, ListOrdered,
   AlignLeft, AlignCenter, Save, PenLine, Columns3, Wind,
+  TrendingUp, Truck, Star, CreditCard, Wallet, Landmark,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { useOsOverview } from "./osApi";
@@ -3316,6 +3317,664 @@ function EmergencyView() {
   );
 }
 
+/* ------------------------------------------------- Surgery / OT · Billing · Inventory --- */
+
+function donutGradient(segs: { pct: number; color: string }[]): string {
+  let acc = 0;
+  return segs.map((s) => { const seg = `${s.color} ${acc}% ${acc + s.pct}%`; acc += s.pct; return seg; }).join(", ");
+}
+
+function KpiRow({ items }: { items: { label: string; value: string; icon: ComponentType<{ size?: number | string }>; color: string; sub?: string }[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      {items.map((k) => (
+        <div key={k.label} className={`${card} flex items-center gap-3 p-3`}>
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: `${k.color}1a`, color: k.color }}><k.icon size={19} /></span>
+          <div className="min-w-0">
+            <div className="text-[10.5px] font-medium leading-tight text-slate-500">{k.label}</div>
+            <div className="text-[19px] font-extrabold leading-none" style={{ fontVariantNumeric: "tabular-nums", color: k.color === "#D13438" ? "#D13438" : "#1f2937" }}>{k.value}</div>
+            {k.sub && <div className="mt-0.5 text-[9px] text-slate-400">{k.sub}</div>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ViewHead({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-[18px] font-extrabold tracking-tight text-[#0c3b63]">{title}</h1>
+        <p className="text-[12px] text-slate-400">{subtitle}</p>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <button type="button" className="flex items-center gap-1 rounded-lg border border-black/[0.08] bg-white/70 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600"><RefreshCw size={12} /> Refresh</button>
+        <button type="button" className="grid h-8 w-8 place-items-center rounded-lg border border-black/[0.07] bg-white/70 text-slate-400"><MoreHorizontal size={18} /></button>
+      </div>
+    </div>
+  );
+}
+
+function DonutCard({ title, action, center, sub, segments, legend }: {
+  title: string; action?: string; center: string; sub: string;
+  segments: { pct: number; color: string }[];
+  legend: { label: string; value: string; color: string }[];
+}) {
+  return (
+    <div className={`${card} p-3`}>
+      <div className="mb-2 flex items-center justify-between"><h3 className="text-[13px] font-bold text-[#0c3b63]">{title}</h3>{action && <button type="button" className="text-[11px] font-semibold text-[#0078d4]">{action}</button>}</div>
+      <div className="flex items-center gap-4">
+        <div className="relative grid h-28 w-28 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(${donutGradient(segments)})` }}>
+          <div className="grid h-[74px] w-[74px] place-items-center rounded-full bg-white text-center">
+            <div><div className="text-[15px] font-extrabold text-slate-800">{center}</div><div className="text-[8px] text-slate-400">{sub}</div></div>
+          </div>
+        </div>
+        <div className="flex-1 space-y-1.5">
+          {legend.map((l) => (
+            <div key={l.label} className="flex items-center gap-1.5 text-[11px]">
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: l.color }} />
+              <span className="flex-1 text-slate-600">{l.label}</span>
+              <span className="font-semibold text-slate-500" style={{ fontVariantNumeric: "tabular-nums" }}>{l.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Avatar({ name, tone }: { name: string; tone: string }) {
+  const init = name.replace(/^(dr\.?|nurse|tech)\s+/i, "").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  return <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white" style={{ background: tone }}>{init}</span>;
+}
+
+function SurgeryView() {
+  const [orTab, setOrTab] = useState("All ORs");
+  const kpis = [
+    { label: "Scheduled", value: "32", icon: Calendar, color: "#0078d4" },
+    { label: "In Pre-Op", value: "8", icon: Stethoscope, color: "#8764B8" },
+    { label: "In Progress", value: "6", icon: Activity, color: "#CA5010" },
+    { label: "Post-Op / Recovery", value: "10", icon: HeartPulse, color: "#038387" },
+    { label: "Completed", value: "18", icon: CheckSquare, color: "#107C10" },
+    { label: "Cancelled", value: "2", icon: XCircle, color: "#D13438" },
+  ];
+  const orTabs = [["All ORs", 32], ["OR 1", 7], ["OR 2", 6], ["OR 3", 6], ["OR 4", 7], ["OR 5", 6]] as const;
+  const schedule = [
+    { time: "08:00 AM", or: "OR 1", name: "Ahmed Khan", mrn: "CLN-00011223", proc: "Laparoscopic Cholecystectomy", surgeon: "Dr. Ahmed Ali", srole: "Chief Surgeon", anes: "Dr. Sara Khan", arole: "General", status: "In Progress", tone: "#CA5010", dur: "90 min", alert: false },
+    { time: "09:45 AM", or: "OR 2", name: "Sara Ali", mrn: "CLN-00067890", proc: "Total Knee Replacement", surgeon: "Dr. Rehan Malik", srole: "Orthopedic", anes: "Dr. Imran Shah", arole: "Spinal", status: "In Progress", tone: "#CA5010", dur: "120 min", alert: true },
+    { time: "11:30 AM", or: "OR 3", name: "Bilal Ahmed", mrn: "CLN-00011224", proc: "Robotic Prostatectomy", surgeon: "Dr. Ahmed Ali", srole: "Chief Surgeon", anes: "Dr. Ayesha Noor", arole: "General", status: "In Pre-Op", tone: "#8764B8", dur: "150 min", alert: false },
+    { time: "01:30 PM", or: "OR 4", name: "Maryam Khan", mrn: "CLN-00033445", proc: "Hysterectomy", surgeon: "Dr. Saba Fatima", srole: "Gynecologist", anes: "Dr. Sara Khan", arole: "General", status: "Scheduled", tone: "#334155", dur: "90 min", alert: false },
+    { time: "03:15 PM", or: "OR 5", name: "Usman Tariq", mrn: "CLN-00055678", proc: "Shoulder Arthroscopy", surgeon: "Dr. Rehan Malik", srole: "Orthopedic", anes: "Dr. Imran Shah", arole: "Regional", status: "Scheduled", tone: "#334155", dur: "60 min", alert: false },
+  ];
+  const otStatus = [
+    { or: "OR 1", proc: "Laparoscopic Cholecystectomy", pct: 80, status: "In Progress", tone: "#CA5010" },
+    { or: "OR 2", proc: "Total Knee Replacement", pct: 65, status: "In Progress", tone: "#CA5010" },
+    { or: "OR 3", proc: "Robotic Prostatectomy", pct: 40, status: "In Pre-Op", tone: "#8764B8" },
+    { or: "OR 4", proc: "Next: 03:15 PM", pct: 0, status: "Available", tone: "#16a34a" },
+    { or: "OR 5", proc: "Next: 04:30 PM", pct: 0, status: "Cleaning", tone: "#0078d4" },
+  ];
+  const timeline = [
+    { t: "07:15 AM", label: "Patient In", state: "Completed" },
+    { t: "07:30 AM", label: "In Pre-Op", state: "Completed" },
+    { t: "08:00 AM", label: "Surgery Started", state: "In Progress" },
+    { t: "09:30 AM", label: "Surgery End (ETA)", state: "Pending" },
+    { t: "09:45 AM", label: "In Recovery (ETA)", state: "Pending" },
+  ];
+  const team = [
+    { name: "Dr. Ahmed Ali", role: "Chief Surgeon", tone: "#0078d4" },
+    { name: "Dr. Sara Khan", role: "Anesthesiologist", tone: "#8764B8" },
+    { name: "Nurse Ayesha", role: "Scrub Nurse", tone: "#038387" },
+    { name: "Nurse Fatima", role: "Circulating Nurse", tone: "#CA5010" },
+    { name: "Tech Imran", role: "OT Technician", tone: "#0c3b63" },
+  ];
+  const vitals = [
+    { label: "HR", value: "78 bpm", color: "#D13438" },
+    { label: "BP", value: "120/80 mmHg", color: "#0078d4" },
+    { label: "SpO₂", value: "98 %", color: "#16a34a" },
+    { label: "EtCO₂", value: "35 mmHg", color: "#CA5010" },
+    { label: "Temp", value: "36.6 °C", color: "#038387" },
+  ];
+  const upcoming = [
+    { date: "May 21, 08:00 AM", proc: "Heart Bypass Surgery", surgeon: "Dr. Ahmed Ali", or: "OR 1" },
+    { date: "May 21, 10:30 AM", proc: "Liver Resection", surgeon: "Dr. Faisal Rana", or: "OR 2" },
+    { date: "May 21, 01:00 PM", proc: "Spine Fusion", surgeon: "Dr. Rehan Malik", or: "OR 3" },
+  ];
+  const tracker = [
+    { label: "Instruments", value: "1,234", sub: "Total Sets", icon: Scissors },
+    { label: "Implants", value: "856", sub: "Items in Stock", icon: Bone },
+    { label: "Due for Sterilization", value: "28", sub: "Today", icon: RefreshCw },
+  ];
+  const st = (s: string) => (s === "Completed" ? "#16a34a" : s === "In Progress" ? "#0078d4" : "#94a3b8");
+  return (
+    <div className="space-y-4">
+      <ViewHead title="Surgery / OT Command Center" subtitle="Real-time overview of OT operations" />
+      <KpiRow items={kpis} />
+
+      <div className="grid gap-3 xl:grid-cols-[1.7fr_1fr]">
+        {/* OR Schedule */}
+        <div className={`${card} p-3`}>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-[13px] font-bold text-[#0c3b63]">OR Schedule <span className="text-[10px] font-normal text-slate-400">· Today, May 20, 2024</span></h3>
+            <div className="flex items-center gap-1.5">
+              <button type="button" className="flex items-center gap-1 rounded-lg border border-black/[0.08] bg-white/70 px-2 py-1 text-[10.5px] font-semibold text-slate-600"><Filter size={12} /> Filters</button>
+              <button type="button" className="flex items-center gap-1 rounded-lg border border-black/[0.08] bg-white/70 px-2 py-1 text-[10.5px] font-semibold text-slate-600"><Columns3 size={12} /> Columns</button>
+              <button type="button" className="grid h-7 w-7 place-items-center rounded-lg border border-black/[0.08] bg-white/70 text-slate-400"><RefreshCw size={13} /></button>
+            </div>
+          </div>
+          <div className="mb-2 flex items-center gap-3 overflow-x-auto">
+            {orTabs.map(([label, n]) => (
+              <button key={label} type="button" onClick={() => setOrTab(label)} className="flex items-center gap-1 whitespace-nowrap pb-1 text-[12px] font-semibold" style={{ color: orTab === label ? "#0078d4" : "#64748b", borderBottom: orTab === label ? "2px solid #0078d4" : "2px solid transparent" }}>
+                {label} <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-500">{n}</span>
+              </button>
+            ))}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-[11px]">
+              <thead><tr className={th}>
+                <th className={cellHead}>Time</th><th className={cellHead}>OR</th><th className={cellHead}>Patient</th><th className={cellHead}>Procedure</th><th className={cellHead}>Surgeon</th><th className={cellHead}>Anesthesia</th><th className={cellHead}>Status</th><th className={cellHead}>Duration</th><th className="pb-1.5 font-bold">Alerts</th>
+              </tr></thead>
+              <tbody>
+                {schedule.map((r) => (
+                  <tr key={r.mrn} className="border-t border-black/[0.05]">
+                    <td className="py-1.5 pr-3 font-semibold text-slate-600">{r.time}</td>
+                    <td className="py-1.5 pr-3"><span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{r.or}</span></td>
+                    <td className="py-1.5 pr-3"><div className="font-semibold text-slate-700">{r.name}</div><div className="text-[9.5px] text-slate-400">MRN: {r.mrn}</div></td>
+                    <td className="py-1.5 pr-3 text-slate-600">{r.proc}</td>
+                    <td className="py-1.5 pr-3"><div className="font-semibold text-slate-700">{r.surgeon}</div><div className="text-[9.5px] text-slate-400">{r.srole}</div></td>
+                    <td className="py-1.5 pr-3"><div className="font-semibold text-slate-700">{r.anes}</div><div className="text-[9.5px] text-slate-400">{r.arole}</div></td>
+                    <td className="py-1.5 pr-3"><Pill tone={r.tone}>{r.status}</Pill></td>
+                    <td className="py-1.5 pr-3 text-slate-500">{r.dur}</td>
+                    <td className="py-1.5">{r.alert ? <TriangleAlert size={14} className="text-[#D13438]" /> : <span className="text-slate-300">—</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-2 text-[11px] text-slate-400">Showing 1 to 5 of 32 surgeries</div>
+        </div>
+
+        {/* Live OT Status */}
+        <div className={`${card} p-3`}>
+          <PanelHead title="Live OT Status" action="View All" />
+          <div className="space-y-2.5">
+            {otStatus.map((o) => (
+              <div key={o.or} className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2"><span className="text-[12px] font-bold text-slate-700">{o.or}</span><Pill tone={o.tone}>{o.status}</Pill></div>
+                  <div className="truncate text-[10.5px] text-slate-400">{o.proc}</div>
+                </div>
+                <div className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(${o.tone} 0 ${o.pct}%, #e2e8f0 ${o.pct}% 100%)` }}>
+                  <div className="grid h-8 w-8 place-items-center rounded-full bg-white text-[9px] font-bold text-slate-700">{o.pct}%</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Current surgery · timeline · team · vitals */}
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className={`${card} p-3`}>
+          <div className="mb-2 flex items-center justify-between"><h3 className="text-[12.5px] font-bold text-[#0c3b63]">Current Surgery <span className="text-[9.5px] font-normal text-slate-400">· OR 1</span></h3><button type="button" className="text-[10.5px] font-semibold text-[#0078d4]">View Details</button></div>
+          <div className="flex items-center gap-2.5"><Avatar name="Ahmed Khan" tone="#0078d4" /><div className="min-w-0"><div className="truncate text-[12.5px] font-bold text-slate-700">Ahmed Khan</div><div className="text-[9.5px] text-slate-400">MRN: CLN-00011223 · 58 Y, M · O+</div></div></div>
+          <div className="mt-2.5 space-y-1.5 border-t border-black/[0.06] pt-2.5 text-[11px]">
+            {[["Procedure", "Laparoscopic Cholecystectomy"], ["Surgeon", "Dr. Ahmed Ali"], ["Anesthesia", "Dr. Sara Khan (General)"], ["Start Time", "08:00 AM"], ["Expected End", "09:30 AM (in 35 min)"]].map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-2"><span className="text-slate-400">{k}</span><span className="text-right font-semibold text-slate-600">{v}</span></div>
+            ))}
+          </div>
+          <div className="mt-2"><Pill tone="#CA5010">In Progress</Pill></div>
+        </div>
+
+        <div className={`${card} p-3`}>
+          <PanelHead title="Surgery Timeline" />
+          <div className="space-y-0">
+            {timeline.map((s, i) => (
+              <div key={s.label} className="flex gap-2.5">
+                <div className="flex flex-col items-center">
+                  <span className="grid h-4 w-4 place-items-center rounded-full" style={{ background: st(s.state) }}>{s.state === "Completed" && <CheckSquare size={9} className="text-white" />}</span>
+                  {i < timeline.length - 1 && <span className="h-6 w-px" style={{ background: st(s.state) }} />}
+                </div>
+                <div className="-mt-0.5 pb-1"><div className="text-[9.5px] text-slate-400">{s.t}</div><div className="text-[11.5px] font-semibold text-slate-700">{s.label}</div></div>
+                <span className="ml-auto text-[10px] font-semibold" style={{ color: st(s.state) }}>{s.state}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={`${card} p-3`}>
+          <PanelHead title="Team in OT" />
+          <div className="space-y-2">
+            {team.map((m) => (
+              <div key={m.name} className="flex items-center gap-2.5"><Avatar name={m.name} tone={m.tone} /><div className="min-w-0 flex-1"><div className="truncate text-[11.5px] font-semibold text-slate-700">{m.name}</div><div className="text-[9.5px] text-slate-400">{m.role}</div></div><span className="h-2 w-2 rounded-full bg-[#16a34a]" /></div>
+            ))}
+          </div>
+        </div>
+
+        <div className={`${card} p-3`}>
+          <div className="mb-2 flex items-center justify-between"><h3 className="text-[12.5px] font-bold text-[#0c3b63]">Real-time Vitals</h3><span className="flex items-center gap-1 text-[9.5px] font-semibold text-[#16a34a]"><span className="h-1.5 w-1.5 rounded-full bg-[#16a34a]" /> Live</span></div>
+          <div className="space-y-2">
+            {vitals.map((v) => (
+              <div key={v.label} className="flex items-center gap-2">
+                <span className="w-12 text-[11px] font-semibold text-slate-500">{v.label}</span>
+                <span className="w-24 text-[12px] font-bold text-slate-700" style={{ fontVariantNumeric: "tabular-nums" }}>{v.value}</span>
+                <Spark color={v.color} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Utilization · Upcoming · Tracker · Sterilization */}
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <DonutCard title="OT Utilization" action="View Analytics" center="78%" sub="Utilization"
+          segments={[{ pct: 78, color: "#0078d4" }, { pct: 18, color: "#16a34a" }, { pct: 4, color: "#D13438" }]}
+          legend={[{ label: "In Use", value: "19h 40m (78%)", color: "#0078d4" }, { label: "Available", value: "5h 20m (21%)", color: "#16a34a" }, { label: "Blocked", value: "1h 00m (4%)", color: "#D13438" }]} />
+
+        <div className={`${card} p-3`}>
+          <PanelHead title="Upcoming High Priority" action="View All" />
+          <div className="space-y-2">
+            {upcoming.map((u) => (
+              <div key={u.proc} className="flex items-center gap-2 rounded-lg border border-black/[0.05] bg-white/60 px-2 py-1.5">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[rgba(0,120,212,.1)] text-[#0078d4]"><Scissors size={13} /></span>
+                <div className="min-w-0 flex-1"><div className="truncate text-[11.5px] font-semibold text-slate-700">{u.proc}</div><div className="truncate text-[9.5px] text-slate-400">{u.date} · {u.surgeon}</div></div>
+                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9.5px] font-bold text-slate-600">{u.or}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={`${card} p-3`}>
+          <PanelHead title="Implant & Instrument Tracker" action="View" />
+          <div className="space-y-2">
+            {tracker.map((t) => (
+              <div key={t.label} className="flex items-center gap-2.5 rounded-lg border border-black/[0.05] bg-white/60 px-2.5 py-2">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[rgba(0,120,212,.1)] text-[#0078d4]"><t.icon size={15} /></span>
+                <div className="min-w-0 flex-1"><div className="text-[15px] font-extrabold leading-none text-slate-800">{t.value}</div><div className="text-[9.5px] text-slate-400">{t.label} · {t.sub}</div></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <DonutCard title="Sterilization Status" action="View All" center="92%" sub="Sterile"
+          segments={[{ pct: 92, color: "#16a34a" }, { pct: 6, color: "#0078d4" }, { pct: 2, color: "#D13438" }]}
+          legend={[{ label: "Sterile", value: "248 (92%)", color: "#16a34a" }, { label: "In Process", value: "16 (6%)", color: "#0078d4" }, { label: "Failed", value: "4 (2%)", color: "#D13438" }]} />
+      </div>
+    </div>
+  );
+}
+
+function BillingView() {
+  const [wlTab, setWlTab] = useState("All");
+  const kpis = [
+    { label: "Total Invoices", value: "1,245", icon: FileText, color: "#0078d4" },
+    { label: "Claims Submitted", value: "672", icon: FileCheck, color: "#8764B8" },
+    { label: "Claims Paid", value: "512", icon: CheckSquare, color: "#107C10" },
+    { label: "Denials", value: "68", icon: XCircle, color: "#D13438" },
+    { label: "Payment Posts", value: "328", icon: Wallet, color: "#038387" },
+    { label: "Refunds", value: "22", icon: RotateCcw, color: "#CA5010" },
+  ];
+  const wlTabs = [["All", 1245], ["Unpaid", 678], ["Partially Paid", 156], ["Overdue", 411], ["Draft", 32]] as const;
+  const invoices = [
+    { inv: "INV-25050145", name: "Ahmed Khan", mrn: "CLN-00011223", date: "May 20, 2024", visit: "Inpatient", gross: "₹ 85,420", bal: "₹ 45,650", status: "Overdue", tone: "#D13438", due: "May 27, 2024" },
+    { inv: "INV-25050144", name: "Sara Ali", mrn: "CLN-00067890", date: "May 20, 2024", visit: "Outpatient", gross: "₹ 15,230", bal: "₹ 7,230", status: "Unpaid", tone: "#CA5010", due: "Jun 04, 2024" },
+    { inv: "INV-25050143", name: "Bilal Ahmed", mrn: "CLN-00011224", date: "May 19, 2024", visit: "Inpatient", gross: "₹ 1,24,530", bal: "₹ 1,24,530", status: "Unpaid", tone: "#CA5010", due: "Jun 02, 2024" },
+    { inv: "INV-25050142", name: "Maryam Khan", mrn: "CLN-00033445", date: "May 19, 2024", visit: "Emergency", gross: "₹ 22,840", bal: "₹ 11,420", status: "Partially Paid", tone: "#0078d4", due: "Jun 03, 2024" },
+    { inv: "INV-25050141", name: "Usman Tariq", mrn: "CLN-00055678", date: "May 18, 2024", visit: "Outpatient", gross: "₹ 9,860", bal: "₹ 0", status: "Paid", tone: "#16a34a", due: "—" },
+  ];
+  const denials = [
+    { reason: "Medical Necessity", claims: 22, pct: "32.4%", amount: "₹ 52.41 L", tone: "#D13438" },
+    { reason: "Authorization Missing", claims: 15, pct: "22.1%", amount: "₹ 31.22 L", tone: "#CA5010" },
+    { reason: "Coding Error", claims: 11, pct: "16.2%", amount: "₹ 18.74 L", tone: "#8764B8" },
+    { reason: "Duplicate Claim", claims: 8, pct: "11.8%", amount: "₹ 12.36 L", tone: "#0078d4" },
+    { reason: "Others", claims: 12, pct: "17.6%", amount: "₹ 17.84 L", tone: "#94a3b8" },
+  ];
+  const payers = [
+    { payer: "Star Health", claims: 128, paid: "₹ 2.48 Cr", denial: "5.2%", days: 18 },
+    { payer: "Care Health Insurance", claims: 112, paid: "₹ 1.96 Cr", denial: "6.1%", days: 21 },
+    { payer: "MedSave TPA", claims: 96, paid: "₹ 1.64 Cr", denial: "7.8%", days: 24 },
+    { payer: "Bajaj Allianz", claims: 84, paid: "₹ 1.28 Cr", denial: "4.6%", days: 16 },
+    { payer: "Aditya Birla Health", claims: 76, paid: "₹ 1.08 Cr", denial: "6.3%", days: 19 },
+  ];
+  const payments = [
+    { rcpt: "RCPT-2505210", name: "John Smith", payer: "Star Health", amount: "₹ 85,420", on: "May 21, 2024" },
+    { rcpt: "RCPT-2505209", name: "Sara Ali", payer: "Care Health", amount: "₹ 45,230", on: "May 21, 2024" },
+    { rcpt: "RCPT-2505208", name: "Ahmed Khan", payer: "Self Pay", amount: "₹ 22,000", on: "May 21, 2024" },
+    { rcpt: "RCPT-2505207", name: "Maryam Khan", payer: "MedSave TPA", amount: "₹ 16,840", on: "May 20, 2024" },
+    { rcpt: "RCPT-2505206", name: "Bilal Ahmed", payer: "Bajaj Allianz", amount: "₹ 12,450", on: "May 20, 2024" },
+  ];
+  return (
+    <div className="space-y-4">
+      <ViewHead title="Billing Command Center" subtitle="Real-time overview of hospital financial operations" />
+      <KpiRow items={kpis} />
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <DonutCard title="Accounts Receivable Aging" action="View Analytics" center="₹ 8.92 Cr" sub="Total AR"
+          segments={[{ pct: 27.8, color: "#0078d4" }, { pct: 24.2, color: "#16a34a" }, { pct: 19.5, color: "#CA8A04" }, { pct: 13.7, color: "#CA5010" }, { pct: 14.8, color: "#D13438" }]}
+          legend={[{ label: "0 – 30 Days", value: "₹ 2.48 Cr · 27.8%", color: "#0078d4" }, { label: "31 – 60 Days", value: "₹ 2.16 Cr · 24.2%", color: "#16a34a" }, { label: "61 – 90 Days", value: "₹ 1.74 Cr · 19.5%", color: "#CA8A04" }, { label: "91 – 120 Days", value: "₹ 1.22 Cr · 13.7%", color: "#CA5010" }, { label: "120+ Days", value: "₹ 1.32 Cr · 14.8%", color: "#D13438" }]} />
+        <DonutCard title="Payer Mix" action="View Analytics" center="₹ 18.64 L" sub="Total Charges"
+          segments={[{ pct: 66.8, color: "#0078d4" }, { pct: 17.4, color: "#8764B8" }, { pct: 10, color: "#16a34a" }, { pct: 5.8, color: "#CA5010" }]}
+          legend={[{ label: "Insurance", value: "₹ 12.45 L · 66.8%", color: "#0078d4" }, { label: "TPA", value: "₹ 3.24 L · 17.4%", color: "#8764B8" }, { label: "Corporate", value: "₹ 1.86 L · 10.0%", color: "#16a34a" }, { label: "Self Pay", value: "₹ 1.09 L · 5.8%", color: "#CA5010" }]} />
+      </div>
+
+      {/* Invoice Worklist */}
+      <div className={`${card} p-3`}>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-4">
+            <h3 className="text-[13px] font-bold text-[#0c3b63]">Invoice Worklist</h3>
+            <div className="flex items-center gap-3 overflow-x-auto">
+              {wlTabs.map(([label, n]) => (
+                <button key={label} type="button" onClick={() => setWlTab(label)} className="flex items-center gap-1 whitespace-nowrap pb-1 text-[12px] font-semibold" style={{ color: wlTab === label ? "#0078d4" : "#64748b", borderBottom: wlTab === label ? "2px solid #0078d4" : "2px solid transparent" }}>
+                  {label} <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-500">{n}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button type="button" className="flex items-center gap-1 rounded-lg border border-black/[0.08] bg-white/70 px-2 py-1 text-[10.5px] font-semibold text-slate-600"><Filter size={12} /> Filters</button>
+            <button type="button" className="flex items-center gap-1 rounded-lg border border-black/[0.08] bg-white/70 px-2 py-1 text-[10.5px] font-semibold text-slate-600"><Columns3 size={12} /> Columns</button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] text-left text-[11px]">
+            <thead><tr className={th}>
+              <th className={cellHead}>Invoice #</th><th className={cellHead}>Patient</th><th className={cellHead}>MRN</th><th className={cellHead}>Date</th><th className={cellHead}>Visit Type</th><th className={cellHead}>Gross Amount</th><th className={cellHead}>Balance Due</th><th className={cellHead}>Status</th><th className={cellHead}>Due Date</th><th className="pb-1.5 font-bold">Actions</th>
+            </tr></thead>
+            <tbody>
+              {invoices.map((r) => (
+                <tr key={r.inv} className="border-t border-black/[0.05]">
+                  <td className="py-1.5 pr-3 font-semibold text-[#0078d4]">{r.inv}</td>
+                  <td className="py-1.5 pr-3 font-semibold text-slate-700">{r.name}</td>
+                  <td className="py-1.5 pr-3 text-slate-500">{r.mrn}</td>
+                  <td className="py-1.5 pr-3 text-slate-500">{r.date}</td>
+                  <td className="py-1.5 pr-3 text-slate-600">{r.visit}</td>
+                  <td className="py-1.5 pr-3 font-semibold text-slate-700" style={{ fontVariantNumeric: "tabular-nums" }}>{r.gross}</td>
+                  <td className="py-1.5 pr-3 font-semibold text-slate-700" style={{ fontVariantNumeric: "tabular-nums" }}>{r.bal}</td>
+                  <td className="py-1.5 pr-3"><Pill tone={r.tone}>{r.status}</Pill></td>
+                  <td className="py-1.5 pr-3 text-slate-500">{r.due}</td>
+                  <td className="py-1.5"><button type="button" className="grid h-6 w-6 place-items-center rounded border border-black/[0.08] text-slate-400"><MoreHorizontal size={14} /></button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Claims summary · denials · collection trend */}
+      <div className="grid gap-3 xl:grid-cols-3">
+        <DonutCard title="Claims Summary" action="View Report" center="672" sub="Total Claims"
+          segments={[{ pct: 76.2, color: "#16a34a" }, { pct: 10.1, color: "#D13438" }, { pct: 13.7, color: "#CA8A04" }]}
+          legend={[{ label: "Approved", value: "512 (76.2%)", color: "#16a34a" }, { label: "Denied", value: "68 (10.1%)", color: "#D13438" }, { label: "Pending", value: "92 (13.7%)", color: "#CA8A04" }]} />
+
+        <div className={`${card} p-3`}>
+          <PanelHead title="Top Denial Reasons" action="View Denial Report" />
+          <div className="space-y-2">
+            {denials.map((d) => (
+              <div key={d.reason}>
+                <div className="flex items-center justify-between text-[11px]"><span className="text-slate-600">{d.reason}</span><span className="font-semibold text-slate-500">{d.claims} ({d.pct})</span></div>
+                <div className="my-1"><Bar pct={parseFloat(d.pct)} tone={d.tone} /></div>
+                <div className="text-right text-[9.5px] text-slate-400">{d.amount}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={`${card} p-3`}>
+          <div className="mb-1 flex items-center justify-between"><h3 className="text-[13px] font-bold text-[#0c3b63]">Collection Trend <span className="text-[9.5px] font-normal text-slate-400">(MTD)</span></h3><button type="button" className="text-[11px] font-semibold text-[#0078d4]">View Analytics</button></div>
+          <div className="flex items-baseline gap-2"><span className="text-[24px] font-extrabold text-slate-800">82.6%</span><span className="flex items-center gap-0.5 text-[11px] font-semibold text-[#16a34a]"><TrendingUp size={13} /> 6.1% vs last month</span></div>
+          <div className="mt-1 text-[9.5px] text-slate-400">Collection Rate · Goal ₹ 15 L</div>
+          <div className="mt-2 flex h-24 items-end gap-1.5">
+            {[38, 46, 52, 60, 66, 74, 82].map((h, i) => (
+              <div key={i} className="flex-1 rounded-t" style={{ height: `${h}%`, background: i === 6 ? "#0078d4" : "rgba(0,120,212,.28)" }} />
+            ))}
+          </div>
+          <div className="mt-1 flex justify-between text-[9px] text-slate-400"><span>May 1</span><span>May 8</span><span>May 15</span><span>May 22</span><span>May 29</span></div>
+        </div>
+      </div>
+
+      {/* Payer performance · recent payments · payment mode */}
+      <div className="grid gap-3 xl:grid-cols-3">
+        <div className={`${card} p-3`}>
+          <PanelHead title="Payer Performance (Top 5)" action="View All" />
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[300px] text-left text-[11px]">
+              <thead><tr className={th}><th className={cellHead}>Payer</th><th className={cellHead}>Claims</th><th className={cellHead}>Paid</th><th className={cellHead}>Denial</th><th className="pb-1.5 font-bold">Days</th></tr></thead>
+              <tbody>
+                {payers.map((p) => (
+                  <tr key={p.payer} className="border-t border-black/[0.05]">
+                    <td className="py-1.5 pr-3 font-semibold text-slate-700">{p.payer}</td>
+                    <td className="py-1.5 pr-3 text-slate-500">{p.claims}</td>
+                    <td className="py-1.5 pr-3 font-semibold text-slate-700">{p.paid}</td>
+                    <td className="py-1.5 pr-3 text-slate-500">{p.denial}</td>
+                    <td className="py-1.5 text-slate-500">{p.days}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className={`${card} p-3`}>
+          <PanelHead title="Recent Payments" action="View All" />
+          <div className="space-y-1.5">
+            {payments.map((p) => (
+              <div key={p.rcpt} className="flex items-center gap-2 rounded-lg border border-black/[0.05] bg-white/60 px-2 py-1.5">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[rgba(16,124,16,.12)] text-[#107C10]"><IndianRupee size={13} /></span>
+                <div className="min-w-0 flex-1"><div className="truncate text-[11.5px] font-semibold text-slate-700">{p.name}</div><div className="truncate text-[9.5px] text-slate-400">{p.rcpt} · {p.payer}</div></div>
+                <div className="text-right"><div className="text-[12px] font-bold text-slate-700">{p.amount}</div><div className="text-[9px] text-slate-400">{p.on}</div></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <DonutCard title="Payment Mode Summary" action="View Report" center="₹ 9.72 L" sub="Collected"
+          segments={[{ pct: 42.4, color: "#0078d4" }, { pct: 26.1, color: "#8764B8" }, { pct: 19.8, color: "#16a34a" }, { pct: 11.7, color: "#CA5010" }]}
+          legend={[{ label: "Net Banking", value: "₹ 4.12 L · 42.4%", color: "#0078d4" }, { label: "Card", value: "₹ 2.54 L · 26.1%", color: "#8764B8" }, { label: "UPI", value: "₹ 1.92 L · 19.8%", color: "#16a34a" }, { label: "Cash", value: "₹ 1.14 L · 11.7%", color: "#CA5010" }]} />
+      </div>
+    </div>
+  );
+}
+
+function InventoryView() {
+  const [wlTab, setWlTab] = useState("All Items");
+  const kpis = [
+    { label: "Total Items", value: "4,586", icon: Boxes, color: "#0078d4" },
+    { label: "Stock Value", value: "₹ 8.64 Cr", icon: IndianRupee, color: "#107C10" },
+    { label: "Purchase Orders", value: "52", icon: FileText, color: "#8764B8" },
+    { label: "GRN Pending", value: "18", icon: Truck, color: "#CA5010" },
+    { label: "Transfers in Transit", value: "14", icon: RefreshCw, color: "#038387" },
+    { label: "Suppliers", value: "236", icon: Building2, color: "#0c3b63" },
+  ];
+  const wlTabs = [["All Items", 4586], ["Low Stock", 126], ["Out of Stock", 28], ["Expiring Soon", 94], ["Non-moving", 132]] as const;
+  const items = [
+    { code: "MED-000123", name: "Paracetamol 650mg Tablet", cat: "Pharmaceutical", unit: "Tablet", cur: "1,250", min: "500", max: "2,000", status: "In Stock", tone: "#16a34a", upd: "May 20, 2024" },
+    { code: "CON-000456", name: "Surgical Gloves (M)", cat: "Medical Consumable", unit: "Box", cur: "85", min: "100", max: "500", status: "Low Stock", tone: "#CA5010", upd: "May 20, 2024" },
+    { code: "CON-000789", name: "IV Cannula 22G", cat: "Medical Consumable", unit: "Pcs", cur: "0", min: "200", max: "1,000", status: "Out of Stock", tone: "#D13438", upd: "May 20, 2024" },
+    { code: "SUR-000321", name: "Syringe 5ml", cat: "Medical Consumable", unit: "Pcs", cur: "2,860", min: "500", max: "5,000", status: "In Stock", tone: "#16a34a", upd: "May 20, 2024" },
+    { code: "EQU-000654", name: "BP Monitor", cat: "Equipment", unit: "Pcs", cur: "12", min: "5", max: "20", status: "In Stock", tone: "#16a34a", upd: "May 20, 2024" },
+  ];
+  const orders = [
+    { po: "PO-240520-001", supplier: "Medlink Pvt Ltd", date: "May 20, 2024", status: "Ordered", tone: "#0078d4", value: "₹ 2.45 L" },
+    { po: "PO-240520-010", supplier: "HealthSupplies India", date: "May 19, 2024", status: "Approved", tone: "#8764B8", value: "₹ 1.12 L" },
+    { po: "PO-240519-018", supplier: "Surgitech Solutions", date: "May 18, 2024", status: "Partially Received", tone: "#CA5010", value: "₹ 3.68 L" },
+    { po: "PO-240518-015", supplier: "PharmaCare Pvt Ltd", date: "May 18, 2024", status: "Delivered", tone: "#16a34a", value: "₹ 0.98 L" },
+    { po: "PO-240517-009", supplier: "Global Medicals", date: "May 17, 2024", status: "Ordered", tone: "#0078d4", value: "₹ 1.75 L" },
+  ];
+  const expiring = [
+    { name: "Ceftriaxone 1gm Inj.", batch: "B240315", exp: "Jun 05, 2024", qty: "150" },
+    { name: "Pantoprazole 40mg Inj.", batch: "B240410", exp: "Jun 12, 2024", qty: "90" },
+    { name: "Normal Saline 100ml", batch: "B240401", exp: "Jun 18, 2024", qty: "200" },
+    { name: "Metronidazole 100ml", batch: "B240310", exp: "Jun 25, 2024", qty: "120" },
+    { name: "Meropenem 1gm Inj.", batch: "B240402", exp: "Jun 28, 2024", qty: "60" },
+  ];
+  const consumed = [
+    { name: "Paracetamol 650mg Tablet", qty: "12,450", unit: "Tablet" },
+    { name: "IV Fluid NS 100ml", qty: "8,320", unit: "Bottle" },
+    { name: "Surgical Gloves (M)", qty: "7,850", unit: "Box" },
+    { name: "Syringe 5ml", qty: "6,240", unit: "Pcs" },
+    { name: "IV Cannula 22G", qty: "5,910", unit: "Pcs" },
+  ];
+  const stores = [
+    { store: "Central Store", total: "2,458", inStock: "2,102", low: "86", out: "18", value: "₹ 4.25 Cr" },
+    { store: "Pharmacy Store", total: "1,245", inStock: "1,050", low: "28", out: "9", value: "₹ 2.16 Cr" },
+    { store: "OT Store", total: "583", inStock: "506", low: "7", out: "5", value: "₹ 1.02 Cr" },
+    { store: "ICU Store", total: "300", inStock: "260", low: "3", out: "2", value: "₹ 0.65 Cr" },
+  ];
+  const suppliers = [
+    { name: "Medlink Pvt Ltd", otd: "98%", quality: "4.6", fill: "96%", rating: 5 },
+    { name: "HealthSupplies India", otd: "95%", quality: "4.3", fill: "94%", rating: 4 },
+    { name: "Surgitech Solutions", otd: "92%", quality: "4.4", fill: "91%", rating: 4 },
+    { name: "PharmaCare Pvt Ltd", otd: "90%", quality: "4.1", fill: "88%", rating: 4 },
+    { name: "Global Medicals", otd: "89%", quality: "4.2", fill: "87%", rating: 4 },
+  ];
+  return (
+    <div className="space-y-4">
+      <ViewHead title="Inventory Command Center" subtitle="Real-time overview of inventory operations" />
+      <KpiRow items={kpis} />
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <DonutCard title="Stock Overview" action="View Analytics" center="4,586" sub="Total Items"
+          segments={[{ pct: 83.8, color: "#16a34a" }, { pct: 2.7, color: "#CA5010" }, { pct: 0.6, color: "#D13438" }, { pct: 2.9, color: "#94a3b8" }, { pct: 1.3, color: "#8764B8" }, { pct: 8.7, color: "#e2e8f0" }]}
+          legend={[{ label: "In Stock", value: "3,842 (83.8%)", color: "#16a34a" }, { label: "Low Stock", value: "126 (2.7%)", color: "#CA5010" }, { label: "Out of Stock", value: "28 (0.6%)", color: "#D13438" }, { label: "Non-moving (90+ Days)", value: "132 (2.9%)", color: "#94a3b8" }, { label: "Expired", value: "58 (1.3%)", color: "#8764B8" }]} />
+        <DonutCard title="Stock Value by Category" action="View Full Report" center="₹ 8.64 Cr" sub="Total Value"
+          segments={[{ pct: 37.7, color: "#0078d4" }, { pct: 27.9, color: "#16a34a" }, { pct: 17.6, color: "#CA8A04" }, { pct: 11.1, color: "#8764B8" }, { pct: 5.7, color: "#94a3b8" }]}
+          legend={[{ label: "Pharmaceuticals", value: "₹ 3.26 Cr · 37.7%", color: "#0078d4" }, { label: "Medical Consumables", value: "₹ 2.41 Cr · 27.9%", color: "#16a34a" }, { label: "Surgical Items", value: "₹ 1.52 Cr · 17.6%", color: "#CA8A04" }, { label: "Equipment", value: "₹ 0.96 Cr · 11.1%", color: "#8764B8" }, { label: "Others", value: "₹ 0.49 Cr · 5.7%", color: "#94a3b8" }]} />
+      </div>
+
+      {/* Inventory Worklist */}
+      <div className={`${card} p-3`}>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-4">
+            <h3 className="text-[13px] font-bold text-[#0c3b63]">Inventory Worklist</h3>
+            <div className="flex items-center gap-3 overflow-x-auto">
+              {wlTabs.map(([label, n]) => (
+                <button key={label} type="button" onClick={() => setWlTab(label)} className="flex items-center gap-1 whitespace-nowrap pb-1 text-[12px] font-semibold" style={{ color: wlTab === label ? "#0078d4" : "#64748b", borderBottom: wlTab === label ? "2px solid #0078d4" : "2px solid transparent" }}>
+                  {label} <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-500">{n}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button type="button" className="flex items-center gap-1 rounded-lg border border-black/[0.08] bg-white/70 px-2 py-1 text-[10.5px] font-semibold text-slate-600"><Filter size={12} /> Filters</button>
+            <button type="button" className="flex items-center gap-1 rounded-lg border border-black/[0.08] bg-white/70 px-2 py-1 text-[10.5px] font-semibold text-slate-600"><Download size={12} /> Export</button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[880px] text-left text-[11px]">
+            <thead><tr className={th}>
+              <th className={cellHead}>Item Code</th><th className={cellHead}>Item Name</th><th className={cellHead}>Category</th><th className={cellHead}>Unit</th><th className={cellHead}>Current Stock</th><th className={cellHead}>Min Level</th><th className={cellHead}>Max Level</th><th className={cellHead}>Status</th><th className={cellHead}>Last Updated</th><th className="pb-1.5 font-bold">Actions</th>
+            </tr></thead>
+            <tbody>
+              {items.map((r) => (
+                <tr key={r.code} className="border-t border-black/[0.05]">
+                  <td className="py-1.5 pr-3 font-semibold text-[#0078d4]">{r.code}</td>
+                  <td className="py-1.5 pr-3 font-semibold text-slate-700">{r.name}</td>
+                  <td className="py-1.5 pr-3 text-slate-600">{r.cat}</td>
+                  <td className="py-1.5 pr-3 text-slate-500">{r.unit}</td>
+                  <td className="py-1.5 pr-3 font-bold" style={{ fontVariantNumeric: "tabular-nums", color: r.status === "Out of Stock" ? "#D13438" : "#1f2937" }}>{r.cur}</td>
+                  <td className="py-1.5 pr-3 text-slate-500">{r.min}</td>
+                  <td className="py-1.5 pr-3 text-slate-500">{r.max}</td>
+                  <td className="py-1.5 pr-3"><Pill tone={r.tone}>{r.status}</Pill></td>
+                  <td className="py-1.5 pr-3 text-slate-500">{r.upd}</td>
+                  <td className="py-1.5"><button type="button" className="grid h-6 w-6 place-items-center rounded border border-black/[0.08] text-slate-400"><MoreHorizontal size={14} /></button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-2 text-[11px] text-slate-400">Showing 1 to 5 of 4,586 items</div>
+      </div>
+
+      {/* Purchase orders · expiring · top consumed */}
+      <div className="grid gap-3 xl:grid-cols-3">
+        <div className={`${card} p-3`}>
+          <PanelHead title="Recent Purchase Orders" action="View All" />
+          <div className="space-y-1.5">
+            {orders.map((o) => (
+              <div key={o.po} className="flex items-center gap-2 rounded-lg border border-black/[0.05] bg-white/60 px-2 py-1.5">
+                <div className="min-w-0 flex-1"><div className="truncate text-[11.5px] font-semibold text-[#0078d4]">{o.po}</div><div className="truncate text-[9.5px] text-slate-400">{o.supplier} · {o.date}</div></div>
+                <div className="flex flex-col items-end gap-1"><Pill tone={o.tone}>{o.status}</Pill><span className="text-[10.5px] font-bold text-slate-700">{o.value}</span></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={`${card} p-3`}>
+          <PanelHead title="Expiring Items (Next 30 Days)" action="View Report" />
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[280px] text-left text-[11px]">
+              <thead><tr className={th}><th className={cellHead}>Item Name</th><th className={cellHead}>Batch No.</th><th className={cellHead}>Expiry Date</th><th className="pb-1.5 font-bold">Qty</th></tr></thead>
+              <tbody>
+                {expiring.map((e) => (
+                  <tr key={e.batch} className="border-t border-black/[0.05]">
+                    <td className="py-1.5 pr-3 font-semibold text-slate-700">{e.name}</td>
+                    <td className="py-1.5 pr-3 text-slate-500">{e.batch}</td>
+                    <td className="py-1.5 pr-3 font-semibold text-[#CA5010]">{e.exp}</td>
+                    <td className="py-1.5 text-slate-500">{e.qty}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className={`${card} p-3`}>
+          <PanelHead title="Top Consumed Items (This Month)" action="View Report" />
+          <div className="space-y-2">
+            {consumed.map((c, i) => (
+              <div key={c.name} className="flex items-center gap-2">
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-[rgba(0,120,212,.1)] text-[10px] font-bold text-[#0078d4]">{i + 1}</span>
+                <div className="min-w-0 flex-1"><div className="truncate text-[11.5px] font-semibold text-slate-700">{c.name}</div><div className="text-[9.5px] text-slate-400">{c.unit}</div></div>
+                <span className="text-[12px] font-bold text-slate-700" style={{ fontVariantNumeric: "tabular-nums" }}>{c.qty}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Store-wise · supplier performance · valuation */}
+      <div className="grid gap-3 xl:grid-cols-3">
+        <div className={`${card} p-3`}>
+          <PanelHead title="Store-wise Stock Status" action="View All" />
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[300px] text-left text-[11px]">
+              <thead><tr className={th}><th className={cellHead}>Store</th><th className={cellHead}>Total</th><th className={cellHead}>In Stock</th><th className={cellHead}>Low</th><th className={cellHead}>Out</th><th className="pb-1.5 font-bold">Value</th></tr></thead>
+              <tbody>
+                {stores.map((s) => (
+                  <tr key={s.store} className="border-t border-black/[0.05]">
+                    <td className="py-1.5 pr-3 font-semibold text-slate-700">{s.store}</td>
+                    <td className="py-1.5 pr-3 text-slate-500">{s.total}</td>
+                    <td className="py-1.5 pr-3 font-semibold text-[#16a34a]">{s.inStock}</td>
+                    <td className="py-1.5 pr-3 font-semibold text-[#CA5010]">{s.low}</td>
+                    <td className="py-1.5 pr-3 font-semibold text-[#D13438]">{s.out}</td>
+                    <td className="py-1.5 font-semibold text-slate-700">{s.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className={`${card} p-3`}>
+          <PanelHead title="Supplier Performance (Top 5)" action="View Report" />
+          <div className="space-y-2">
+            {suppliers.map((s) => (
+              <div key={s.name} className="rounded-lg border border-black/[0.05] bg-white/60 px-2.5 py-2">
+                <div className="flex items-center justify-between"><span className="text-[11.5px] font-semibold text-slate-700">{s.name}</span><span className="flex items-center gap-0.5">{Array.from({ length: 5 }).map((_, i) => <Star key={i} size={11} className={i < s.rating ? "fill-[#f5a623] text-[#f5a623]" : "text-slate-300"} />)}</span></div>
+                <div className="mt-1 flex items-center gap-3 text-[9.5px] text-slate-500"><span>On-time: <b className="text-slate-700">{s.otd}</b></span><span>Quality: <b className="text-slate-700">{s.quality}</b></span><span>Fill: <b className="text-slate-700">{s.fill}</b></span></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <DonutCard title="Inventory Valuation Summary" action="View Report" center="₹ 8.64 Cr" sub="Total Value"
+          segments={[{ pct: 37.7, color: "#0078d4" }, { pct: 27.9, color: "#16a34a" }, { pct: 17.6, color: "#CA8A04" }, { pct: 11.1, color: "#8764B8" }, { pct: 5.7, color: "#94a3b8" }]}
+          legend={[{ label: "Pharmaceuticals", value: "₹ 3.26 Cr · 37.7%", color: "#0078d4" }, { label: "Medical Consumables", value: "₹ 2.41 Cr · 27.9%", color: "#16a34a" }, { label: "Surgical Items", value: "₹ 1.52 Cr · 17.6%", color: "#CA8A04" }, { label: "Equipment", value: "₹ 0.96 Cr · 11.1%", color: "#8764B8" }, { label: "Others", value: "₹ 0.49 Cr · 5.7%", color: "#94a3b8" }]} />
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ page --- */
 
 export default function CommandCenterOS() {
@@ -3482,7 +4141,7 @@ export default function CommandCenterOS() {
 
         {/* ------------------------------------------------------------- MAIN */}
         <main className="min-w-0 flex-1 overflow-y-auto px-5 py-4">
-          {activeNav === "Patients" ? <PatientsView /> : activeNav === "Admissions" ? <AdmissionsView /> : activeNav === "Care Team" ? <CareTeamView /> : activeNav === "Labs" ? <LabsView /> : activeNav === "Radiology" ? <RadiologyView /> : activeNav === "Pharmacy" ? <PharmacyView /> : activeNav === "ICU" ? <ICUView /> : activeNav === "Emergency" ? <EmergencyView /> : (
+          {activeNav === "Patients" ? <PatientsView /> : activeNav === "Admissions" ? <AdmissionsView /> : activeNav === "Care Team" ? <CareTeamView /> : activeNav === "Labs" ? <LabsView /> : activeNav === "Radiology" ? <RadiologyView /> : activeNav === "Pharmacy" ? <PharmacyView /> : activeNav === "Surgery / OT" ? <SurgeryView /> : activeNav === "Billing" ? <BillingView /> : activeNav === "Inventory" ? <InventoryView /> : activeNav === "ICU" ? <ICUView /> : activeNav === "Emergency" ? <EmergencyView /> : (
           <>
           {/* header */}
           <div className="mb-3 flex items-center justify-between">
