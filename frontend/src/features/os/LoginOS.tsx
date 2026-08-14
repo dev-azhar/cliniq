@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   HeartPulse, ShieldCheck, Network, Users, PieChart, User, Lock, Eye, EyeOff,
-  KeyRound, Globe, ChevronDown, Stethoscope, MoreHorizontal, Loader2, AlertCircle, HeartHandshake,
+  KeyRound, Globe, ChevronDown, Stethoscope, Loader2, AlertCircle, HeartHandshake,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { osLoginRequest, setOsSession } from "./osSession";

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
 import {
   HeartPulse, Home, Calendar, FileText, FlaskConical, ScanLine, Pill, CreditCard,
   Shield, Users, ClipboardList, Sparkles, Settings, HelpCircle, LogOut, Search,
@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { usePortalSummary, type PortalSummary, type PortalAppointment } from "./portalApi";
-import { getPortalSession, clearPortalSession, portalInitials } from "./portalSession";
+import { getPortalSession, getPortalToken, clearPortalSession, portalInitials, fetchPortalMe } from "./portalSession";
 
 const card = "rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_3px_rgba(28,33,51,.05)]";
 
@@ -978,7 +978,23 @@ export default function PatientPortal() {
   const name = session?.name ?? s?.name ?? "Patient";
   const mrn = session?.mrn ?? s?.mrn ?? "—";
 
-  const logout = () => { clearPortalSession(); navigate("/os/login"); };
+  const logout = () => { clearPortalSession(); navigate("/os/login", { replace: true }); };
+
+  // Guard: validate the token server-side and react to cross-tab logout.
+  useEffect(() => {
+    if (!getPortalToken()) return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "cliniq.portal.session" && !e.newValue) navigate("/os/login", { replace: true });
+    };
+    window.addEventListener("storage", onStorage);
+    fetchPortalMe().catch(() => {
+      clearPortalSession();
+      navigate("/os/login", { replace: true });
+    });
+    return () => window.removeEventListener("storage", onStorage);
+  }, [navigate]);
+
+  if (!session) return <Navigate to="/os/login" replace />;
 
   const content = (() => {
     if (isLoading && !s) return <div className="grid min-h-[60vh] place-items-center text-slate-400"><Loader2 className="animate-spin" size={28} /></div>;

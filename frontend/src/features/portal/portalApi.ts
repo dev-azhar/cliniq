@@ -6,7 +6,7 @@
  * so it keeps working (with placeholders) while loading or if the API is down.
  */
 import { useQuery } from "@tanstack/react-query";
-import { portalAuthHeader, getPortalToken } from "./portalSession";
+import { portalAuthHeader, getPortalToken, getPortalSession } from "./portalSession";
 
 export interface PortalAppointment {
   dr: string;
@@ -70,8 +70,9 @@ async function fetchJson<T>(path: string): Promise<T> {
 }
 
 export function usePortalSummary() {
+  const patientId = getPortalSession()?.patientId ?? null;
   return useQuery({
-    queryKey: ["portal", "summary"],
+    queryKey: ["portal", "summary", patientId],
     queryFn: () => fetchJson<PortalSummary>("/api/v1/os/portal/summary"),
     enabled: !!getPortalToken(),
     staleTime: 20_000,

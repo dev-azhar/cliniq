@@ -78,3 +78,12 @@ export async function portalLoginRequest(input: {
   }
   return (await res.json()) as PortalSession;
 }
+
+/** Authoritative server-side validation of the stored token. Throws on 401. */
+export async function fetchPortalMe(): Promise<{ patientId: string; name: string; mrn: string | null }> {
+  const res = await fetch("/api/v1/os/portal/me", {
+    headers: { Accept: "application/json", ...portalAuthHeader() },
+  });
+  if (!res.ok) throw new Error(`portal/me → ${res.status}`);
+  return await res.json();
+}
