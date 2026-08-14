@@ -6,7 +6,7 @@ import {
   Bell, MessageSquare, ChevronDown, Clock, MapPin, CalendarPlus, CheckCircle2, Circle,
   TriangleAlert, Video, RefreshCw, Download, Building2, Mic, Phone, Heart, Navigation,
   Info, ChevronRight, CalendarClock, XCircle, Stethoscope, Plus, Activity, Droplet,
-  Loader2,
+  Loader2, UserPlus, Send, Lock, Globe, Target, Mail, ShieldCheck,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { usePortalSummary, type PortalSummary, type PortalAppointment } from "./portalApi";
@@ -673,6 +673,286 @@ function BillingView({ s }: { s?: PortalSummary }) {
   );
 }
 
+/* ---------------------------------------------------------------- CARE PLAN */
+
+function CarePlanView({ s }: { s?: PortalSummary }) {
+  const problems = s?.problems ?? [];
+  const meds = s?.medications ?? [];
+  const team = s?.careTeam ?? [];
+  const next = s?.appointments.upcoming[0];
+  const goals = problems.length
+    ? problems.map((p) => ({ title: `Manage ${p.name}`, detail: p.onset || "Keep under active control", pct: 60 }))
+    : [{ title: "Maintain a healthy lifestyle", detail: "Balanced diet, exercise and regular check-ups", pct: 80 }];
+  return (
+    <div className="space-y-4">
+      <PageHead title="Care Plan" sub="Your personalised goals, medications and next steps." />
+      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <div className="space-y-4">
+          <div className={`${card} p-4`}>
+            <SectionHead title="Health Goals" />
+            <div className="space-y-3">
+              {goals.map((g, i) => (
+                <div key={i} className="rounded-xl border border-black/[0.06] p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[rgba(0,120,212,.1)] text-[#0078d4]"><Target size={14} /></span><span className="text-[12.5px] font-semibold text-slate-700">{g.title}</span></div>
+                    <span className="text-[11px] font-bold text-[#0078d4]">{g.pct}%</span>
+                  </div>
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-[#0078d4]" style={{ width: `${g.pct}%` }} /></div>
+                  <div className="mt-1 text-[10.5px] text-slate-400">{g.detail}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className={`${card} p-4`}>
+            <SectionHead title="Medication Plan" />
+            {meds.length ? <div className="space-y-2">{meds.map((m, i) => (
+              <div key={i} className="flex items-center justify-between border-b border-black/[0.04] pb-2 last:border-0">
+                <div className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[rgba(22,163,74,.1)] text-[#16a34a]"><Pill size={13} /></span><span className="text-[12.5px] font-semibold text-slate-700">{m.name}</span></div>
+                <span className="text-[10.5px] text-slate-400">{m.dose || "As prescribed"}</span>
+              </div>
+            ))}</div> : <div className="py-3 text-[12px] text-slate-400">No medications in your plan.</div>}
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className={`${card} p-4`}>
+            <SectionHead title="Next Steps" />
+            <div className="space-y-2.5 text-[12px] text-slate-600">
+              {next ? <div className="flex items-start gap-2"><CalendarClock size={14} className="mt-0.5 shrink-0 text-[#0078d4]" /> <span>Attend your appointment with <b>{next.dr}</b> on {next.date}, {next.time}.</span></div> : <div className="flex items-start gap-2"><CalendarClock size={14} className="mt-0.5 shrink-0 text-[#0078d4]" /> Book a follow-up consultation.</div>}
+              <div className="flex items-start gap-2"><FlaskConical size={14} className="mt-0.5 shrink-0 text-[#8764B8]" /> Repeat recommended lab tests before your next visit.</div>
+              <div className="flex items-start gap-2"><Activity size={14} className="mt-0.5 shrink-0 text-[#16a34a]" /> 30 minutes of activity, 5 days a week.</div>
+            </div>
+          </div>
+          <div className={`${card} p-4`}>
+            <SectionHead title="Care Team" />
+            {team.length ? <div className="space-y-2.5">{team.map((t, i) => (
+              <div key={i} className="flex items-center gap-2.5">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-[#0c3b63] text-[11px] font-bold text-white">{portalInitials(t.name)}</span>
+                <div className="min-w-0 flex-1"><div className="truncate text-[12.5px] font-semibold text-slate-700">{t.name}</div><div className="text-[10.5px] text-slate-400">{t.role}</div></div>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9.5px] font-semibold text-slate-500">{t.badge}</span>
+              </div>
+            ))}</div> : <div className="py-3 text-[12px] text-slate-400">Care team not assigned yet.</div>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- INSURANCE */
+
+function InsuranceView({ s }: { s?: PortalSummary }) {
+  const outstanding = s?.billing.outstanding ?? "₹ 0";
+  const claims = [
+    { id: "CLM-4471", hospital: "ClinIQ Main", date: "May 07, 2026", amount: "₹ 18,400", status: "Approved" },
+    { id: "CLM-4390", hospital: "ClinIQ Main", date: "Apr 03, 2026", amount: "₹ 6,250", status: "Settled" },
+    { id: "CLM-4302", hospital: "City Diagnostics", date: "Feb 21, 2026", amount: "₹ 2,100", status: "Processing" },
+  ];
+  return (
+    <div className="space-y-4">
+      <PageHead title="Insurance" sub="Your policy, coverage and claim history." cta={{ label: "Download e-Card", icon: Download }} />
+      <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+        <div className={`${card} overflow-hidden`}>
+          <div className="flex items-center justify-between p-4 text-white" style={{ background: "linear-gradient(135deg,#0c3b63,#0078d4)" }}>
+            <div><div className="text-[11px] opacity-80">Star Health · Family Floater</div><div className="text-[17px] font-extrabold">HDFX-987654321</div></div>
+            <ShieldCheck size={30} className="opacity-90" />
+          </div>
+          <div className="grid grid-cols-2 gap-y-3 p-4 sm:grid-cols-4">
+            {[["Sum Insured", "₹ 5.00 L"], ["Used", "₹ 1.80 L"], ["Balance", "₹ 3.20 L"], ["Valid Till", "Dec 31, 2026"]].map(([k, v]) => (
+              <div key={k}><div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">{k}</div><div className="text-[13px] font-bold text-slate-800">{v}</div></div>
+            ))}
+          </div>
+        </div>
+        <div className={`${card} p-4`}>
+          <SectionHead title="Coverage" />
+          <div className="space-y-2 text-[12px] text-slate-600">
+            {["Cashless hospitalization", "Pre & post hospitalization (60 days)", "Day-care procedures", "Annual health check-up"].map((c) => (
+              <div key={c} className="flex items-center gap-2"><CheckCircle2 size={14} className="text-[#16a34a]" /> {c}</div>
+            ))}
+          </div>
+          <div className="mt-3 rounded-xl bg-slate-50 p-3 text-[11.5px]"><span className="text-slate-400">Current outstanding</span><div className="text-[15px] font-bold text-[#CA5010]">{outstanding}</div></div>
+        </div>
+      </div>
+      <div className={`${card} overflow-hidden`}>
+        <div className="grid grid-cols-[1fr_1.2fr_1fr_1fr_0.9fr] gap-2 border-b border-black/[0.06] bg-slate-50 px-4 py-2.5 text-[10.5px] font-bold uppercase tracking-wide text-slate-400"><span>Claim</span><span>Hospital</span><span>Date</span><span>Amount</span><span>Status</span></div>
+        {claims.map((c) => (
+          <div key={c.id} className="grid grid-cols-[1fr_1.2fr_1fr_1fr_0.9fr] items-center gap-2 border-b border-black/[0.04] px-4 py-3 text-[12px] last:border-0">
+            <span className="font-semibold text-slate-700">{c.id}</span><span className="text-slate-500">{c.hospital}</span><span className="text-slate-400">{c.date}</span><span className="text-slate-600">{c.amount}</span>
+            <span><span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: apptTone(c.status) + "15", color: apptTone(c.status) }}>{c.status}</span></span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ FAMILY HEALTH */
+
+function FamilyHealthView({ name }: { name: string }) {
+  const members = [
+    { name, rel: "Self", tone: "#0078d4", score: 72, age: "—" },
+    { name: "Ravi Nair", rel: "Spouse", tone: "#16a34a", score: 88, age: "46" },
+    { name: "Ananya Nair", rel: "Daughter", tone: "#D6336C", score: 95, age: "17" },
+    { name: "Meena Nair", rel: "Mother", tone: "#8764B8", score: 64, age: "71" },
+  ];
+  return (
+    <div className="space-y-4">
+      <PageHead title="Family Health" sub="Manage health records for your family." cta={{ label: "Add Member", icon: UserPlus }} />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {members.map((m, i) => {
+          const tone = m.score >= 80 ? "#16a34a" : m.score >= 65 ? "#CA5010" : "#D13438";
+          return (
+            <div key={i} className={`${card} p-4 text-center`}>
+              <span className="mx-auto grid h-14 w-14 place-items-center rounded-full text-[16px] font-bold text-white" style={{ background: m.tone }}>{portalInitials(m.name)}</span>
+              <div className="mt-2 text-[13.5px] font-bold text-slate-800">{m.name}</div>
+              <div className="text-[11px] text-slate-400">{m.rel} · {m.age === "—" ? "You" : `${m.age} yrs`}</div>
+              <div className="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: `${tone}15`, color: tone }}><Heart size={11} fill={tone} /> {m.score}/100</div>
+              <button type="button" className="mt-3 w-full rounded-xl border border-black/[0.08] py-2 text-[11.5px] font-semibold text-slate-600">View Records</button>
+            </div>
+          );
+        })}
+      </div>
+      <div className={`${card} flex items-center gap-3 p-4`}>
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-[rgba(0,120,212,.1)] text-[#0078d4]"><Users size={18} /></span>
+        <div className="flex-1"><div className="text-[12.5px] font-semibold text-slate-700">Shared family access</div><div className="text-[11px] text-slate-400">Members can view shared reports and appointments with your consent.</div></div>
+        <button type="button" className="rounded-xl bg-[#0078d4] px-3 py-2 text-[11.5px] font-semibold text-white">Manage Access</button>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------- AI ASSISTANT */
+
+function AIAssistantView({ s, name }: { s?: PortalSummary; name: string }) {
+  const answer = (q: string): string => {
+    const ql = q.toLowerCase();
+    if (ql.includes("lab") || ql.includes("report")) {
+      const l = s?.labs[0];
+      return l ? `Your most recent lab is ${l.test}: ${l.value} (${l.status}). ${l.status.toLowerCase().includes("normal") ? "That's within range — keep it up!" : "This is outside the usual range; please review it with your doctor."}` : "I don't see any lab results on file yet.";
+    }
+    if (ql.includes("medic") || ql.includes("medicine")) {
+      const meds = s?.medications ?? [];
+      return meds.length ? `You have ${meds.length} active medication(s): ${meds.map((m) => m.name).join(", ")}. Take them as prescribed and set reminders.` : "You have no active medications on record.";
+    }
+    if (ql.includes("appointment") || ql.includes("book")) {
+      const a = s?.appointments.upcoming[0];
+      return a ? `Your next appointment is with ${a.dr} (${a.spec}) on ${a.date} at ${a.time}. You can reschedule from the Appointments page.` : "You have no upcoming appointments. Head to Appointments to book one.";
+    }
+    if (ql.includes("follow")) return "Based on your records, a follow-up in 2–4 weeks is recommended. I can help you book it.";
+    if (ql.includes("tip") || ql.includes("health")) return "Stay hydrated, aim for 30 minutes of daily activity, eat more fibre, and take medicines on time. Small steps add up!";
+    return "I'm your ClinIQ assistant. I can explain your lab reports, medications, appointments and health tips. Try one of the suggestions below.";
+  };
+  const [messages, setMessages] = useState<{ role: "user" | "ai"; text: string }[]>([
+    { role: "ai", text: `Hello ${firstName(name)}! I'm your ClinIQ Health Assistant. Ask me about your labs, medicines or appointments.` },
+  ]);
+  const [input, setInput] = useState("");
+  const send = (text: string) => {
+    const t = text.trim();
+    if (!t) return;
+    setMessages((m) => [...m, { role: "user", text: t }, { role: "ai", text: answer(t) }]);
+    setInput("");
+  };
+  return (
+    <div className="mx-auto flex h-[calc(100vh-136px)] max-w-3xl flex-col">
+      <PageHead title="AI Health Assistant" sub="Ask about your health records — powered by ClinIQ." />
+      <div className={`${card} mt-4 flex min-h-0 flex-1 flex-col`}>
+        <div className="flex-1 space-y-3 overflow-y-auto p-4">
+          {messages.map((m, i) => (
+            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              {m.role === "ai" && <span className="mr-2 grid h-8 w-8 shrink-0 place-items-center self-end rounded-xl text-white" style={{ background: "linear-gradient(150deg,#7c3aed,#4f46e5)" }}><Sparkles size={15} /></span>}
+              <div className={`max-w-[75%] rounded-2xl px-3.5 py-2.5 text-[12.5px] ${m.role === "user" ? "bg-[#0078d4] text-white" : "bg-slate-100 text-slate-700"}`}>{m.text}</div>
+            </div>
+          ))}
+        </div>
+        <div className="border-t border-black/[0.06] p-3">
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {ASSISTANT_CHIPS.map((c) => (<button key={c} type="button" onClick={() => send(c)} className="rounded-full border border-black/[0.08] bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:border-[#7c3aed]/40">{c}</button>))}
+          </div>
+          <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="flex items-center gap-2 rounded-xl border border-black/[0.08] bg-white px-3 py-2">
+            <input value={input} onChange={(e) => setInput(e.target.value)} className="w-full bg-transparent text-[12.5px] text-slate-700 outline-none placeholder:text-slate-400" placeholder="Ask about your labs, medicines, appointments..." />
+            <button type="submit" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white" style={{ background: "linear-gradient(150deg,#7c3aed,#4f46e5)" }}><Send size={15} /></button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------- SETTINGS */
+
+function SettingsView({ s, name, mrn, onLogout }: { s?: PortalSummary; name: string; mrn: string; onLogout: () => void }) {
+  return (
+    <div className="max-w-3xl space-y-4">
+      <PageHead title="Settings" sub="Manage your profile, notifications and security." />
+      <div className={`${card} p-4`}>
+        <SectionHead title="Profile" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {[["Name", name], ["MRN", mrn], ["Mobile", s?.mobile || "—"], ["Gender", s?.gender || "—"], ["Blood Group", s?.bloodGroup || "—"], ["Age", s?.age ? `${s.age} yrs` : "—"]].map(([k, v]) => (
+            <div key={k}><div className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">{k}</div><div className="text-[12.5px] font-semibold text-slate-700">{v}</div></div>
+          ))}
+        </div>
+        <button type="button" className="mt-3 rounded-xl border border-black/[0.08] px-3 py-2 text-[11.5px] font-semibold text-slate-600">Edit Profile</button>
+      </div>
+      <div className={`${card} p-4`}>
+        <SectionHead title="Notifications" />
+        <div className="space-y-2.5">
+          {["Appointment reminders", "Lab result alerts", "Medication reminders", "Billing & payment updates"].map((label, i) => (
+            <label key={label} className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-[12.5px] text-slate-600"><Bell size={13} className="text-slate-400" /> {label}</span>
+              <input type="checkbox" defaultChecked={i < 3} className="h-4 w-4 rounded border-slate-300 accent-[#0078d4]" />
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className={`${card} p-4`}>
+        <SectionHead title="Security" />
+        <div className="space-y-2">
+          <button type="button" className="flex w-full items-center gap-2 rounded-xl border border-black/[0.08] px-3 py-2.5 text-[12px] font-semibold text-slate-600"><Lock size={14} /> Change password</button>
+          <button type="button" className="flex w-full items-center gap-2 rounded-xl border border-black/[0.08] px-3 py-2.5 text-[12px] font-semibold text-slate-600"><Shield size={14} /> Two-factor authentication</button>
+          <button type="button" className="flex w-full items-center gap-2 rounded-xl border border-black/[0.08] px-3 py-2.5 text-[12px] font-semibold text-slate-600"><Globe size={14} /> Language: English (US)</button>
+        </div>
+      </div>
+      <button type="button" onClick={onLogout} className="flex items-center gap-2 rounded-xl border border-[#D13438]/30 px-4 py-2.5 text-[12.5px] font-semibold text-[#D13438]"><LogOut size={15} /> Sign out</button>
+    </div>
+  );
+}
+
+/* --------------------------------------------------------------------- HELP */
+
+function HelpView() {
+  const faqs = [
+    { q: "How do I book an appointment?", a: "Go to Appointments → Book Appointment, choose a specialty and preferred date, then pick an available slot." },
+    { q: "How can I view my lab reports?", a: "Open Lab Reports from the sidebar. Each result shows the value, reference range and status." },
+    { q: "How do I request a medicine refill?", a: "Open Medications and tap Refill on any active prescription." },
+    { q: "How do I pay my bill?", a: "Go to Billing & Payments and tap Pay Now on any outstanding invoice." },
+  ];
+  return (
+    <div className="max-w-3xl space-y-4">
+      <PageHead title="Help & Support" sub="Answers to common questions and ways to reach us." />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className={`${card} p-4`}><span className="grid h-9 w-9 place-items-center rounded-xl bg-[rgba(0,120,212,.1)] text-[#0078d4]"><MessageSquare size={17} /></span><div className="mt-2 text-[12.5px] font-bold text-slate-800">Live Chat</div><div className="text-[10.5px] text-slate-400">Available 24/7</div></div>
+        <div className={`${card} p-4`}><span className="grid h-9 w-9 place-items-center rounded-xl bg-[rgba(22,163,74,.1)] text-[#16a34a]"><Phone size={17} /></span><div className="mt-2 text-[12.5px] font-bold text-slate-800">Call Us</div><div className="text-[10.5px] text-slate-400">+91 98765 43210</div></div>
+        <div className={`${card} p-4`}><span className="grid h-9 w-9 place-items-center rounded-xl bg-[rgba(202,80,16,.1)] text-[#CA5010]"><Mail size={17} /></span><div className="mt-2 text-[12.5px] font-bold text-slate-800">Email</div><div className="text-[10.5px] text-slate-400">care@cliniq.health</div></div>
+      </div>
+      <div className={`${card} p-4`}>
+        <SectionHead title="Frequently Asked Questions" />
+        <div className="divide-y divide-black/[0.05]">
+          {faqs.map((f, i) => (
+            <details key={i} className="group py-2.5">
+              <summary className="flex cursor-pointer items-center justify-between text-[12.5px] font-semibold text-slate-700">{f.q}<ChevronRight size={14} className="text-slate-400 transition group-open:rotate-90" /></summary>
+              <p className="mt-1.5 text-[11.5px] leading-relaxed text-slate-500">{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+      <div className={`${card} flex items-center gap-3 p-4`} style={{ borderColor: "rgba(209,52,56,.2)" }}>
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-[rgba(209,52,56,.1)] text-[#D13438]"><TriangleAlert size={18} /></span>
+        <div className="flex-1"><div className="text-[12.5px] font-bold text-slate-800">Medical emergency?</div><div className="text-[11px] text-slate-400">Call the 24×7 emergency helpline immediately.</div></div>
+        <a href="tel:108" className="rounded-xl bg-[#D13438] px-3 py-2 text-[12px] font-semibold text-white">Call 108</a>
+      </div>
+    </div>
+  );
+}
+
 /* -------------------------------------------------------------- PLACEHOLDER */
 
 function Placeholder({ label, onHome }: { label: string; onHome: () => void }) {
@@ -710,6 +990,12 @@ export default function PatientPortal() {
       case "Radiology": return <RadiologyView s={s} />;
       case "Health Records": return <HealthRecordsView s={s} />;
       case "Billing & Payments": return <BillingView s={s} />;
+      case "Insurance": return <InsuranceView s={s} />;
+      case "Care Plan": return <CarePlanView s={s} />;
+      case "Family Health": return <FamilyHealthView name={name} />;
+      case "AI Assistant": return <AIAssistantView s={s} name={name} />;
+      case "Settings": return <SettingsView s={s} name={name} mrn={mrn} onLogout={logout} />;
+      case "Help & Support": return <HelpView />;
       default: return <Placeholder label={active} onHome={() => setActive("Home")} />;
     }
   })();
